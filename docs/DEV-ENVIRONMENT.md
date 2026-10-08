@@ -53,6 +53,30 @@ wheels for linux/arm64, which cut the build substantially and removed most of th
 from the 1.5.9 client we actually run. `tests/test_health_probe_paths.py` pins the probe paths so
 this cannot silently regress.
 
+## Postgres superusers silently bypass row-level security
+
+This one cost real time and is easy to get wrong without noticing.
+
+The official postgres image makes `POSTGRES_USER` (our `sendox`) the **bootstrap superuser**, and
+Postgres skips RLS policies entirely for superusers — even with `FORCE ROW LEVEL SECURITY`. The
+policies existed, `pg_policy` listed them, and a cross-tenant read still returned another tenant's
+rows. Only a behavioural test caught it; a "does a policy exist?" check passed happily.
+
+Demoting the role does not work either: `ALTER ROLE sendox NOSUPERUSER` fails with *"the bootstrap
+user must have the SUPERUSER attribute"*.
+
+The fix, in the initial migration and `db.py`:
+
+- a `sendox_app` role — `NOLOGIN NOSUPERUSER`, so nothing can connect as it directly and it needs no
+  password — is granted DML on `public`, plus `ALTER DEFAULT PRIVILEGES` so future tables are covered
+- every application session issues `SET LOCAL ROLE sendox_app` before touching data, making
+  `current_user` a non-superuser so policies apply
+- migrations keep running as the owner, which still needs full rights
+
+`tests/test_rls.py::test_application_sessions_are_not_superuser` is the guard. If it ever fails, the
+isolation tests after it are passing vacuously. `/status/database` reports the same thing at runtime
+via its `enforced` field, and the dashboard shows it.
+
 ## Local service versions differ from compose
 
 `make up-native` uses the machine's Homebrew Postgres **15**; compose pins **16**. Everything we use

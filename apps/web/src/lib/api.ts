@@ -38,6 +38,20 @@ export type BuildStatus = {
   modules: StatusItem[];
 };
 
+export type DatabaseStatus =
+  | { reachable: false; error: string }
+  | {
+      reachable: true;
+      migration_revision: string | null;
+      session_role: string;
+      session_is_superuser: boolean;
+      tables: string[];
+      tenant_scoped_tables: string[];
+      rls_protected_tables: string[];
+      unprotected_tables: string[];
+      enforced: boolean;
+    };
+
 export type MjmlError = { line: number; message: string; tagName: string };
 
 export type RenderResult = {
@@ -98,6 +112,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const getReadiness = () => request<Readiness>("/health/ready");
 
 export const getBuildStatus = () => request<BuildStatus>("/status/modules");
+
+export const getDatabaseStatus = () => request<DatabaseStatus>("/status/database");
 
 export const renderSampleEmail = (mjml?: string) =>
   request<RenderResult>("/dev/mjml/render", {

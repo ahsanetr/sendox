@@ -11,7 +11,7 @@ help: ## Show this help
 .PHONY: setup
 setup: ## Install all dependencies (Python + Node) and create .env
 	@test -f .env || (cp .env.example .env && echo "created .env from .env.example")
-	cd $(API) && $(UV) sync --all-extras
+	cd $(API) && $(UV) sync --extra ai
 	pnpm install
 
 .PHONY: up
@@ -80,6 +80,18 @@ lint: ## Lint and type-check everything
 .PHONY: fmt
 fmt: ## Auto-format everything
 	cd $(API) && $(UV) run ruff format . && $(UV) run ruff check --fix .
+
+.PHONY: migrate
+migrate: ## Apply database migrations
+	cd $(API) && $(UV) run alembic upgrade head
+
+.PHONY: migration
+migration: ## Autogenerate a migration: make migration m="add contacts"
+	cd $(API) && $(UV) run alembic revision --autogenerate -m "$(m)"
+
+.PHONY: db-reset
+db-reset: ## Drop and recreate the schema (DESTROYS local data)
+	cd $(API) && $(UV) run alembic downgrade base && $(UV) run alembic upgrade head
 
 .PHONY: verify
 verify: ## End-to-end localhost check of everything phase 0.1 delivers

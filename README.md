@@ -43,6 +43,7 @@ Docker (first required in phase 1.10).
 | Dev dashboard | http://localhost:3000 — live service health, capability checks, build status |
 | API docs | http://localhost:8000/docs |
 | Readiness report | http://localhost:8000/health/ready |
+| Database + isolation state | http://localhost:8000/status/database |
 | Local inbox (Mailpit) | http://localhost:8025 |
 | ChromaDB | http://localhost:8001 |
 
@@ -65,7 +66,7 @@ failing. `make test` is the separate unit-test run.
 ## Testing the API by hand
 
 ```bash
-make test-api                                    # 17 tests, no services needed
+make test-api                                    # 24 tests (RLS tests need Postgres)
 curl -s localhost:8000/health/live               # {"status":"ok","version":"0.1.0"}
 curl -s localhost:8000/health/ready | jq         # per-dependency status + latency
 open http://localhost:8000/docs                  # interactive Swagger UI
@@ -150,6 +151,20 @@ Secrets never go in git. `.env` is gitignored.
 Status comes from `apps/api/src/sendox_api/data/module_status.json`, served at `/status/modules`.
 **Update that file when a phase lands** — it is the single source of truth for progress, and a test
 asserts it still covers all 25 modules.
+
+## Tenant isolation
+
+Every workspace's data is separated in **Postgres**, not in application code:
+
+- tables carrying `tenant_id` have a `FORCE`'d RLS policy comparing it against the
+  `app.current_tenant_id` session setting
+- application sessions run as `sendox_app`, a `NOLOGIN NOSUPERUSER` role they `SET LOCAL ROLE` into —
+  necessary because **Postgres skips RLS for superusers** (see `docs/DEV-ENVIRONMENT.md`)
+- `db.tenant_session(settings, tenant_id)` is the only correct way to read or write tenant data;
+  `global_session` is for `users` and `tenants` and deliberately sees no tenant-scoped rows
+
+A query that forgets to filter by workspace returns nothing rather than another brand's data.
+`tests/test_rls.py` proves it, including that inserting a row for another tenant is refused.
 
 ## Conventions
 

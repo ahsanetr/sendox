@@ -89,6 +89,41 @@ else
   bad "manifest endpoint"
 fi
 
+# ------------------------------------------------- database + tenant isolation
+section "Database & tenant isolation"
+
+if curl -fsS --max-time 10 "$API/status/database" -o /tmp/sendox-db.json 2>/dev/null; then
+  reachable=$(jsonq 'd["reachable"]' < /tmp/sendox-db.json)
+  if [ "$reachable" = "True" ]; then
+    revision=$(jsonq 'd["migration_revision"]' < /tmp/sendox-db.json)
+    role=$(jsonq 'd["session_role"]' < /tmp/sendox-db.json)
+    is_super=$(jsonq 'd["session_is_superuser"]' < /tmp/sendox-db.json)
+    enforced=$(jsonq 'd["enforced"]' < /tmp/sendox-db.json)
+    scoped=$(jsonq '",".join(d["tenant_scoped_tables"])' < /tmp/sendox-db.json)
+    unprotected=$(jsonq '",".join(d["unprotected_tables"])' < /tmp/sendox-db.json)
+
+    [ -n "$revision" ] && [ "$revision" != "None" ] \
+      && ok "migrations applied" "revision $revision" \
+      || bad "migrations applied" "run make migrate"
+
+    [ "$is_super" = "False" ] \
+      && ok "app session is not a superuser" "role=$role" \
+      || bad "app session is not a superuser" "RLS is bypassed for superusers!"
+
+    [ -z "$unprotected" ] \
+      && ok "every tenant-scoped table has an RLS policy" "$scoped" \
+      || bad "every tenant-scoped table has an RLS policy" "unprotected: $unprotected"
+
+    [ "$enforced" = "True" ] \
+      && ok "tenant isolation enforced" \
+      || bad "tenant isolation enforced"
+  else
+    bad "database reachable" "$(jsonq 'd["error"]' < /tmp/sendox-db.json)"
+  fi
+else
+  bad "database status endpoint"
+fi
+
 # ------------------------------------------------------------ queue round-trip
 section "Queue (Redis + Celery worker)"
 

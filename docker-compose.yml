@@ -72,6 +72,20 @@ services:
       timeout: 5s
       retries: 5
 
+  # Runs once per `up`, before anything touches the database.
+  migrate:
+    build:
+      context: ./apps/api
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://sendox:sendox@postgres:5432/sendox
+    depends_on:
+      postgres: {condition: service_healthy}
+
   api:
     build:
       context: ./apps/api
@@ -96,6 +110,7 @@ services:
       retries: 10
       start_period: 20s
     depends_on:
+      migrate: {condition: service_completed_successfully}
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
       chromadb: {condition: service_healthy}
@@ -116,6 +131,7 @@ services:
     volumes:
       - ./apps/api/src:/app/src
     depends_on:
+      migrate: {condition: service_completed_successfully}
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
 

@@ -1,5 +1,6 @@
 import { BuildStatusPanel } from "@/components/build-status";
 import { CapabilityChecks } from "@/components/capability-checks";
+import { DatabaseStatus } from "@/components/database-status";
 import { ServiceHealth } from "@/components/service-health";
 
 export default function DashboardPage() {
@@ -19,6 +20,7 @@ export default function DashboardPage() {
 
       <div className="space-y-5">
         <ServiceHealth />
+        <DatabaseStatus />
         <CapabilityChecks />
         <BuildStatusPanel />
       </div>

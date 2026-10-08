@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     chroma_url: str = "http://localhost:8001"
     mjml_url: str = "http://localhost:7070"
 
+    # The non-superuser role every application session switches into, so that
+    # row-level security actually applies. Created by the initial migration.
+    db_app_role: str = "sendox_app"
+
     # HTTP
     cors_origins: str = "http://localhost:3000"
     web_base_url: str = "http://localhost:3000"

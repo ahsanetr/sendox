@@ -80,6 +80,12 @@ else
   echo "    ready on 7070 (log: .native-logs/mjml.log)"
 fi
 
+# --- Schema ----------------------------------------------------------------
+say "Migrations"
+(cd "$REPO_ROOT/apps/api" && uv run alembic upgrade head >/dev/null 2>&1) \
+  && echo "    schema at head" \
+  || echo "    FAILED — run: make migrate"
+
 cat <<'NEXT'
 
 All backing services up. Mailpit is not available natively — install Docker for
