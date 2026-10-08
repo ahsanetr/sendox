@@ -62,6 +62,42 @@ export type RenderResult = {
   html: string;
 };
 
+export type VectorStats = {
+  tenant_id: string;
+  collection: string;
+  chunks: number;
+  embedding_model: string;
+  dimensions: number;
+  distance: string;
+};
+
+export type VectorMatch = {
+  id: string;
+  similarity: number;
+  distance: number;
+  content_type: string | null;
+  text: string;
+};
+
+export type VectorQueryResult = {
+  query: string;
+  tenant_id: string;
+  matches: VectorMatch[];
+};
+
+export type AiStatus = {
+  configured: boolean;
+  model: string;
+  hint: string | null;
+};
+
+export type AiPing = {
+  text: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+};
+
 export type TaskAccepted = { task_id: string; state: string };
 
 export type TaskResult = {
@@ -120,6 +156,26 @@ export const renderSampleEmail = (mjml?: string) =>
     method: "POST",
     body: JSON.stringify(mjml ? { mjml } : {}),
   });
+
+export const getVectorStats = () => request<VectorStats>("/dev/vectors/stats");
+
+export const seedVectors = () =>
+  request<VectorStats & { chunks_written: number }>("/dev/vectors/seed", {
+    method: "POST",
+  });
+
+export const queryVectors = (query: string, topK = 3) =>
+  request<VectorQueryResult>("/dev/vectors/query", {
+    method: "POST",
+    body: JSON.stringify({ query, top_k: topK }),
+  });
+
+export const dropVectors = () =>
+  request<{ dropped: string }>("/dev/vectors", { method: "DELETE" });
+
+export const getAiStatus = () => request<AiStatus>("/dev/ai/status");
+
+export const pingAi = () => request<AiPing>("/dev/ai/ping", { method: "POST" });
 
 export const enqueuePing = (payload: string) =>
   request<TaskAccepted>(

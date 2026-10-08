@@ -77,6 +77,32 @@ The fix, in the initial migration and `db.py`:
 isolation tests after it are passing vacuously. `/status/database` reports the same thing at runtime
 via its `enforced` field, and the dashboard shows it.
 
+## The embedding model is baked into the API image
+
+Embeddings run locally through Chroma's default model (all-MiniLM-L6-v2 via ONNX, 384 dimensions) —
+no API key, no per-call cost, no torch. The model is ~79MB and Chroma downloads it from S3 on first
+use.
+
+On this connection that download takes about two minutes, so a container that fetched it at startup
+never became healthy in time. The Dockerfile now warms the model at **build** time so it lives in an
+image layer, and the app's startup warmup is fired as a background task rather than awaited — a cold
+cache must never block readiness.
+
+If you see `onnx.tar.gz` progress bars in `docker compose logs api`, the bake step did not run and
+the image needs rebuilding.
+
+## Keep slow synchronous work off the event loop
+
+Chroma's client is synchronous and embedding a batch takes seconds. Calling it straight from an async
+FastAPI handler blocked the event loop and made a concurrent 10-second health check time out.
+
+`clients/chroma.py` therefore exposes async wrappers (`aupsert_chunks`, `aquery`, `astats`, `adrop`)
+that run the sync functions via `asyncio.to_thread`. **Request handlers use those**; Celery tasks can
+call the sync versions directly. The same applies to SQLAlchemy, which is synchronous here too.
+
+`tests/test_event_loop.py` pins it: a health check must answer in under three seconds while a seed
+is in flight.
+
 ## Local service versions differ from compose
 
 `make up-native` uses the machine's Homebrew Postgres **15**; compose pins **16**. Everything we use

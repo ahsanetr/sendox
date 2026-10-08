@@ -60,8 +60,8 @@
       "id": "0.5",
       "name": "Anthropic + Chroma smoke harness",
       "release": "R0",
-      "status": "planned",
-      "note": "Chroma reachable already; no Claude call made yet"
+      "status": "done",
+      "note": "Vector store client (collection per tenant) + Claude client. Embeddings run locally via ONNX MiniLM, 384 dims, no API key"
     },
     {
       "id": "0.6",
@@ -119,14 +119,16 @@
       "name": "Brand Knowledge Vectorization & Storage",
       "release": "R1",
       "phase": "1.5",
-      "status": "planned"
+      "status": "partial",
+      "note": "Vector store, embeddings, upsert and semantic search working. Chunking pipeline, brand-profile schema and KB versioning not started"
     },
     {
       "id": "M8",
       "name": "RAG Retrieval & Prompt Assembly Pipeline",
       "release": "R1",
       "phase": "1.6",
-      "status": "planned"
+      "status": "planned",
+      "note": "Retrieval half works via the vector store client; prompt assembly and re-ranking not started"
     },
     {
       "id": "M9",

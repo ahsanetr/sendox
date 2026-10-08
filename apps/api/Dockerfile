@@ -27,5 +27,13 @@ COPY alembic.ini ./
 COPY alembic ./alembic
 RUN uv sync --extra ai
 
+# Bake the local embedding model (all-MiniLM-L6-v2, ~79MB) into the image.
+# Otherwise every container start re-downloads it from S3, which on a slow link
+# takes minutes and makes the healthcheck fail before the app is ready.
+RUN uv run python -c "\
+from chromadb.api.types import DefaultEmbeddingFunction; \
+DefaultEmbeddingFunction()(['warmup']); \
+print('embedding model cached')"
+
 EXPOSE 8000
 CMD ["uvicorn", "sendox_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

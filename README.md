@@ -44,6 +44,7 @@ Docker (first required in phase 1.10).
 | API docs | http://localhost:8000/docs |
 | Readiness report | http://localhost:8000/health/ready |
 | Database + isolation state | http://localhost:8000/status/database |
+| Vector store sandbox | `POST /dev/vectors/seed`, `POST /dev/vectors/query` |
 | Local inbox (Mailpit) | http://localhost:8025 |
 | ChromaDB | http://localhost:8001 |
 
@@ -66,7 +67,7 @@ failing. `make test` is the separate unit-test run.
 ## Testing the API by hand
 
 ```bash
-make test-api                                    # 24 tests (RLS tests need Postgres)
+make test-api                                    # 36 tests (integration ones need the stack up)
 curl -s localhost:8000/health/live               # {"status":"ok","version":"0.1.0"}
 curl -s localhost:8000/health/ready | jq         # per-dependency status + latency
 open http://localhost:8000/docs                  # interactive Swagger UI
@@ -97,7 +98,7 @@ apps/
       health.py       dependency probes behind /health/ready
       worker.py       Celery app
       tasks.py        Celery tasks
-      clients/mjml.py MJML sidecar client (the Design Agent will use this in 1.8)
+      clients/         mjml (render sidecar), chroma (vector store), claude (LLM)
       data/           module_status.json — what is built, by release
       routers/        health, status, dev (dev is not mounted in production)
     tests/
@@ -165,6 +166,27 @@ Every workspace's data is separated in **Postgres**, not in application code:
 
 A query that forgets to filter by workspace returns nothing rather than another brand's data.
 `tests/test_rls.py` proves it, including that inserting a row for another tenant is refused.
+
+## Brand knowledge (vector store)
+
+Each workspace gets its own Chroma collection, `brand-<tenant_id>`. **Chroma has no row-level
+security**, so unlike Postgres the boundary is the collection name — and nothing in
+`clients/chroma.py` accepts a collection name from a caller, it is always derived from a tenant id.
+
+Embeddings are computed locally (all-MiniLM-L6-v2 via ONNX, 384 dims): no API key, no per-call cost.
+The scope document permits this — M7 FE-2 reads "OpenAI text-embedding-3-small **or open-source
+alternative**".
+
+Try it from the dashboard, or:
+
+```bash
+curl -X POST localhost:8000/dev/vectors/seed
+curl -X POST localhost:8000/dev/vectors/query -H 'content-type: application/json' \
+  -d '{"query":"can I send something back?","top_k":2}'
+```
+
+The sample content mentions neither "send" nor "back" — matching happens by meaning, which is the
+whole point of the RAG pipeline in M8.
 
 ## Conventions
 

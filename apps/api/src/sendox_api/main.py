@@ -1,5 +1,6 @@
 """FastAPI application factory."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -9,9 +10,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from sendox_api import __version__
+from sendox_api.clients import chroma
 from sendox_api.config import Settings, get_settings
 from sendox_api.logging_setup import configure_logging
 from sendox_api.routers import dev, health, status
+
+
+async def _warm_embeddings(log: structlog.stdlib.BoundLogger) -> None:
+    try:
+        await chroma.awarm_embedding_model()
+        log.info("api.embedding_model_ready")
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - never take the app down for this
+        log.warning("api.embedding_model_unavailable", error=str(exc))
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -30,7 +42,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         log.info("api.startup", env=settings.env, version=__version__)
+        # Warm the local embedding model in the background. Deliberately not
+        # awaited: if the model is not already cached it downloads ~79MB, and
+        # blocking startup on that makes the container healthcheck fail before the
+        # app ever serves a request. The image bakes the model in, so this is
+        # normally instant.
+        warmup = asyncio.create_task(_warm_embeddings(log))
         yield
+        warmup.cancel()
         log.info("api.shutdown")
 
     app = FastAPI(

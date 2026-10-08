@@ -1,3 +1,5 @@
+import { AiStatus } from "@/components/ai-status";
+import { BrandKnowledge } from "@/components/brand-knowledge";
 import { BuildStatusPanel } from "@/components/build-status";
 import { CapabilityChecks } from "@/components/capability-checks";
 import { DatabaseStatus } from "@/components/database-status";
@@ -22,6 +24,8 @@ export default function DashboardPage() {
         <ServiceHealth />
         <DatabaseStatus />
         <CapabilityChecks />
+        <BrandKnowledge />
+        <AiStatus />
         <BuildStatusPanel />
       </div>
 

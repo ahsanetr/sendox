@@ -180,6 +180,51 @@ else
   bad "invalid MJML reported as errors, not a crash"
 fi
 
+# ------------------------------------------------- vector store (brand knowledge)
+section "Brand knowledge vector store"
+
+# First run in a fresh container downloads the ~80MB ONNX embedding model.
+if curl -fsS --max-time 180 -X POST "$API/dev/vectors/seed" -o /tmp/sendox-seed.json 2>/dev/null; then
+  written=$(jsonq 'd["chunks_written"]' < /tmp/sendox-seed.json)
+  dims=$(jsonq 'd["dimensions"]' < /tmp/sendox-seed.json)
+  ok "sample brand content embedded" "$written chunks, ${dims}d"
+else
+  bad "sample brand content embedded"
+fi
+
+# Shares no words with the source text, so a keyword match cannot explain a hit.
+if curl -fsS --max-time 30 -X POST "$API/dev/vectors/query" \
+     -H 'content-type: application/json' \
+     -d '{"query":"can I send something back if it does not fit","top_k":1}' \
+     -o /tmp/sendox-query.json 2>/dev/null; then
+  top_id=$(jsonq 'd["matches"][0]["id"] if d["matches"] else ""' < /tmp/sendox-query.json)
+  sim=$(jsonq 'd["matches"][0]["similarity"] if d["matches"] else 0' < /tmp/sendox-query.json)
+  [ "$top_id" = "shipping" ] \
+    && ok "semantic search retrieves by meaning" "top hit '$top_id' @ $sim" \
+    || bad "semantic search retrieves by meaning" "expected 'shipping', got '$top_id'"
+else
+  bad "semantic search"
+fi
+
+# ------------------------------------------------------------------------- AI
+section "Claude API"
+
+if curl -fsS --max-time 10 "$API/dev/ai/status" -o /tmp/sendox-ai.json 2>/dev/null; then
+  configured=$(jsonq 'd["configured"]' < /tmp/sendox-ai.json)
+  model=$(jsonq 'd["model"]' < /tmp/sendox-ai.json)
+  if [ "$configured" = "True" ]; then
+    if reply=$(curl -fsS --max-time 60 -X POST "$API/dev/ai/ping" 2>/dev/null); then
+      ok "Claude round-trip" "$(printf '%s' "$reply" | jsonq 'd["model"]')"
+    else
+      bad "Claude round-trip" "key present but the call failed"
+    fi
+  else
+    skipped "Claude round-trip" "ANTHROPIC_API_KEY not set (model would be $model)"
+  fi
+else
+  bad "Claude status endpoint"
+fi
+
 # ------------------------------------------------------------- direct services
 section "Services reachable directly"
 
