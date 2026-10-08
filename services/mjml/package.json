@@ -1,0 +1,19 @@
+{
+  "name": "@sendox/mjml-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MJML -> responsive HTML sidecar. MJML is Node-only, so the Python API renders email through this service.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mjml": "^4.15.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

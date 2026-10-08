@@ -1,0 +1,88 @@
+{
+  "note": "Single source of truth for what is built. Update a status here the moment a phase lands; docs/BUILD-PLAN.md is the plan, this is the state.",
+  "releases": [
+    { "id": "R0", "title": "Skeleton", "window": "8-21 Oct 2026" },
+    { "id": "R1", "title": "It sends", "window": "22 Oct - 24 Dec 2026" },
+    { "id": "R2", "title": "It runs itself", "window": "5 Jan - 28 Feb 2027" },
+    { "id": "R3", "title": "It learns + multi-channel", "window": "1 Mar - 25 Apr 2027" },
+    { "id": "R4", "title": "It's a product", "window": "26 Apr - 23 May 2027" }
+  ],
+  "foundation": [
+    {
+      "id": "0.1",
+      "name": "Monorepo, compose stack, CI",
+      "release": "R0",
+      "status": "done",
+      "note": "8 services healthy; ruff + mypy strict + 10 tests + 3 MJML tests green"
+    },
+    {
+      "id": "0.2",
+      "name": "Alembic, tenants/users schema, Postgres RLS",
+      "release": "R0",
+      "status": "planned",
+      "note": "Next up. Exit criterion: a test proving cross-tenant reads fail"
+    },
+    {
+      "id": "0.3",
+      "name": "Web shell + NextAuth -> FastAPI JWT",
+      "release": "R0",
+      "status": "planned",
+      "note": "This status dashboard is a dev tool, not 0.3; real auth is still to come"
+    },
+    {
+      "id": "0.4",
+      "name": "Celery worker + beat round-trip",
+      "release": "R0",
+      "status": "done",
+      "note": "Landed early with 0.1: sendox.ping enqueued from the API returns SUCCESS"
+    },
+    {
+      "id": "0.5",
+      "name": "Anthropic + Chroma smoke harness",
+      "release": "R0",
+      "status": "planned",
+      "note": "Chroma reachable already; no Claude call made yet"
+    },
+    {
+      "id": "0.6",
+      "name": "Long-lead items filed (SES, Shopify, SMS, WhatsApp)",
+      "release": "R0",
+      "status": "planned",
+      "note": "Blocks R1 sending and R3 channels. Not a coding task"
+    }
+  ],
+  "modules": [
+    { "id": "M1", "name": "User Authentication & Workspace Management", "release": "R1", "phase": "1.1", "status": "planned" },
+    { "id": "M2", "name": "Subscription Billing & Plan Management", "release": "R4", "phase": "4.1", "status": "planned" },
+    { "id": "M3", "name": "Shopify Connection & Data Synchronization", "release": "R1", "phase": "1.2", "status": "planned" },
+    { "id": "M4", "name": "Webhook Events Processing", "release": "R2", "phase": "2.1", "status": "planned" },
+    { "id": "M5", "name": "Contact Database & Behavioral Event Store", "release": "R1", "phase": "1.3", "status": "planned" },
+    { "id": "M6", "name": "Brand Onboarding & Context Extraction", "release": "R1", "phase": "1.4", "status": "planned" },
+    { "id": "M7", "name": "Brand Knowledge Vectorization & Storage", "release": "R1", "phase": "1.5", "status": "planned" },
+    { "id": "M8", "name": "RAG Retrieval & Prompt Assembly Pipeline", "release": "R1", "phase": "1.6", "status": "planned" },
+    { "id": "M9", "name": "Strategy Agent (AI Campaign Planner)", "release": "R2", "phase": "2.4", "status": "planned" },
+    { "id": "M10", "name": "Copywriting Agent", "release": "R1", "phase": "1.7", "status": "planned" },
+    {
+      "id": "M11",
+      "name": "Design Agent & MJML Email Renderer",
+      "release": "R1",
+      "phase": "1.8",
+      "status": "partial",
+      "note": "MJML render service built and working in 0.1. Layout library and AI layout selection not started"
+    },
+    { "id": "M12", "name": "AI Content Validation & Approval Layer", "release": "R1", "phase": "1.9", "status": "planned" },
+    { "id": "M13", "name": "Campaign Engine (Email, SMS & WhatsApp)", "release": "R1", "phase": "1.13", "status": "planned" },
+    { "id": "M14", "name": "Flow Engine (Multi-Channel)", "release": "R2", "phase": "2.2", "status": "planned" },
+    { "id": "M15", "name": "Signup Forms & Subscriber Growth", "release": "R4", "phase": "4.2", "status": "planned" },
+    { "id": "M16", "name": "Domain Authentication & Email Send Pipeline", "release": "R1", "phase": "1.10", "status": "planned" },
+    { "id": "M17", "name": "Engagement & Performance Tracking", "release": "R1", "phase": "1.11", "status": "planned" },
+    { "id": "M18", "name": "Bounce, Complaint & Unsubscribe Handling", "release": "R1", "phase": "1.12", "status": "planned" },
+    { "id": "M19", "name": "Optimization Agent & Closed-Loop Learning", "release": "R3", "phase": "3.1", "status": "planned" },
+    { "id": "M20", "name": "Predictive Customer Intelligence Engine", "release": "R3", "phase": "3.5", "status": "planned" },
+    { "id": "M21", "name": "Conversational AI Marketing Copilot", "release": "R4", "phase": "4.3", "status": "planned" },
+    { "id": "M22", "name": "Analytics & Performance Insights Dashboard", "release": "R2", "phase": "2.5", "status": "planned" },
+    { "id": "M23", "name": "SMS Channel Infrastructure", "release": "R3", "phase": "3.2", "status": "planned" },
+    { "id": "M24", "name": "WhatsApp Business Channel", "release": "R3", "phase": "3.3", "status": "planned" },
+    { "id": "M25", "name": "Cross-Channel Orchestration & Consent", "release": "R3", "phase": "3.4", "status": "planned" }
+  ]
+}

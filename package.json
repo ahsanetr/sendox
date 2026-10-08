@@ -1,0 +1,11 @@
+{
+  "name": "sendox",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @sendox/web dev",
+    "build:web": "pnpm --filter @sendox/web build",
+    "lint:web": "pnpm --filter @sendox/web lint",
+    "dev:mjml": "pnpm --filter @sendox/mjml-renderer dev"
+  }
+}

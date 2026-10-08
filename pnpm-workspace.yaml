@@ -1,0 +1,11 @@
+packages:
+  - apps/web
+  - services/*
+
+allowBuilds:
+  unrs-resolver: set this to true or false
+
+# Native binding for the ESLint import resolver. Explicitly approved so installs
+# are non-interactive in CI. (pnpm 11 reads settings here, not in package.json.)
+onlyBuiltDependencies:
+  - unrs-resolver
