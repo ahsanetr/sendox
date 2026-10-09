@@ -115,6 +115,27 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+
+  get isUnauthenticated(): boolean {
+    return this.status === 401;
+  }
+}
+
+/** Pydantic reports field errors as objects; our own validation as plain strings. */
+function readDetail(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object" || !("detail" in body)) return fallback;
+  const detail = (body as { detail: unknown }).detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) =>
+        typeof item === "string"
+          ? item
+          : String((item as { msg?: unknown }).msg ?? JSON.stringify(item)),
+      )
+      .join(" · ");
+  }
+  return fallback;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -123,6 +144,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: { "content-type": "application/json", ...init?.headers },
+      // The API issues an httpOnly session cookie, so the session is never
+      // readable by page scripts. localhost:3000 and localhost:8000 are the same
+      // site (ports do not change the site), so a SameSite=Lax cookie is sent.
+      credentials: "include",
       cache: "no-store",
     });
   } catch {
@@ -134,11 +159,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = (await response.json().catch(() => null)) as unknown;
 
   if (!response.ok && response.status !== 503) {
-    const detail =
-      body && typeof body === "object" && "detail" in body
-        ? String((body as { detail: unknown }).detail)
-        : response.statusText;
-    throw new ApiError(detail, response.status);
+    throw new ApiError(readDetail(body, response.statusText), response.status);
   }
 
   return body as T;
@@ -185,3 +206,137 @@ export const enqueuePing = (payload: string) =>
 
 export const getTask = (taskId: string) =>
   request<TaskResult>(`/dev/tasks/${taskId}`);
+
+
+// ------------------------------------------------------------------ accounts
+
+export type Me = {
+  user: {
+    id: string;
+    email: string;
+    full_name: string | null;
+    email_verified: boolean;
+    created_at: string;
+  };
+  workspaces: {
+    id: string;
+    name: string;
+    slug: string;
+    timezone: string;
+    role: MemberRole;
+  }[];
+};
+
+export type MemberRole = "owner" | "admin" | "editor" | "viewer";
+
+export const ROLE_ORDER: MemberRole[] = ["viewer", "editor", "admin", "owner"];
+
+export type RegisterResult = {
+  user: Me["user"];
+  next: string;
+  dev_hint: string | null;
+  dev_verification_token: string | null;
+};
+
+export type Member = {
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  role: MemberRole;
+  joined_at: string;
+};
+
+export type Invitation = {
+  id: string;
+  email: string;
+  role: MemberRole;
+  expires_at: string;
+};
+
+export type AuditEntry = {
+  action: string;
+  target: string | null;
+  actor_user_id: string | null;
+  meta: Record<string, unknown>;
+  at: string;
+};
+
+export const getMe = () => request<Me>("/auth/me");
+
+export const register = (body: {
+  email: string;
+  password: string;
+  full_name?: string;
+  workspace_name?: string;
+}) => request<RegisterResult>("/auth/register", { method: "POST", body: JSON.stringify(body) });
+
+export const verifyEmail = (token: string) =>
+  request<{ user: Me["user"] }>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+
+export const login = (email: string, password: string) =>
+  request<{ user: Me["user"] }>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+
+export const logout = () => request<{ status: string }>("/auth/logout", { method: "POST" });
+
+export const deleteAccount = () =>
+  request<{ status: string; workspaces_deleted: number; memberships_removed: number }>(
+    "/auth/me",
+    { method: "DELETE" },
+  );
+
+// ---------------------------------------------------------------- workspaces
+
+export const createWorkspace = (name: string, timezone = "UTC") =>
+  request<Me["workspaces"][number]>("/workspaces", {
+    method: "POST",
+    body: JSON.stringify({ name, timezone }),
+  });
+
+export const updateWorkspace = (
+  id: string,
+  body: { name?: string; timezone?: string },
+) =>
+  request<Me["workspaces"][number]>(`/workspaces/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const getMembers = (id: string) => request<Member[]>(`/workspaces/${id}/members`);
+
+export const setMemberRole = (id: string, userId: string, role: MemberRole) =>
+  request<{ status: string }>(`/workspaces/${id}/members/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+
+export const removeMember = (id: string, userId: string) =>
+  request<{ status: string }>(`/workspaces/${id}/members/${userId}`, { method: "DELETE" });
+
+export const getInvitations = (id: string) =>
+  request<Invitation[]>(`/workspaces/${id}/invitations`);
+
+export const inviteMember = (id: string, email: string, role: MemberRole) =>
+  request<{ invitation: Invitation; dev_invitation_token: string | null }>(
+    `/workspaces/${id}/invitations`,
+    { method: "POST", body: JSON.stringify({ email, role }) },
+  );
+
+export const acceptInvitation = (token: string) =>
+  request<{ status: string; workspace: { id: string; name: string }; role: MemberRole }>(
+    "/invitations/accept",
+    { method: "POST", body: JSON.stringify({ token }) },
+  );
+
+export const previewInvitation = (token: string) =>
+  request<{ email: string; role: MemberRole; workspace: string | null; expires_at: string }>(
+    "/invitations/preview",
+    { method: "POST", body: JSON.stringify({ token }) },
+  );
+
+export const getAudit = (id: string) => request<AuditEntry[]>(`/workspaces/${id}/audit`);

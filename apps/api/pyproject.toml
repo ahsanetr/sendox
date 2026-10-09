@@ -6,7 +6,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
-    "pydantic>=2.9",
+    "pydantic[email]>=2.9",
     "pydantic-settings>=2.6",
     "sqlalchemy>=2.0.36",
     "alembic>=1.14",
@@ -15,8 +15,9 @@ dependencies = [
     "redis>=5.2",
     "httpx>=0.28",
     "structlog>=24.4",
-    "python-jose[cryptography]>=3.3",
     "sentry-sdk[fastapi]>=2.18",
+    "pwdlib[argon2]>=0.2",
+    "pyjwt>=2.9",
 ]
 
 # Opt-in groups keep the default install small. torch-sized things live in `ml`.
@@ -37,7 +38,6 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
     "mypy>=1.13",
-    "types-python-jose>=3.3",
 ]
 
 [build-system]

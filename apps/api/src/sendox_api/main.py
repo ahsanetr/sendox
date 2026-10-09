@@ -13,7 +13,7 @@ from sendox_api import __version__
 from sendox_api.clients import chroma
 from sendox_api.config import Settings, get_settings
 from sendox_api.logging_setup import configure_logging
-from sendox_api.routers import dev, health, status
+from sendox_api.routers import auth, dev, health, invitations, status, workspaces
 
 
 async def _warm_embeddings(log: structlog.stdlib.BoundLogger) -> None:
@@ -75,6 +75,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(status.router)
+    app.include_router(auth.router)
+    app.include_router(workspaces.router)
+    app.include_router(invitations.router)
 
     # Capability checks are a development aid; they expose internals and must not
     # ship to production.

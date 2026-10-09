@@ -54,8 +54,9 @@ dev-api: ## Run the API on the host (needs backing services up)
 	cd $(API) && $(UV) run uvicorn sendox_api.main:app --reload --port 8000
 
 .PHONY: dev-worker
-dev-worker: ## Run a Celery worker on the host
-	cd $(API) && $(UV) run celery -A sendox_api.worker.celery_app worker --loglevel=INFO
+dev-worker: ## Run a Celery worker on the host (threads pool — see DEV-ENVIRONMENT.md)
+	cd $(API) && $(UV) run celery -A sendox_api.worker.celery_app worker \
+		--loglevel=INFO --pool=threads --concurrency=4
 
 .PHONY: dev-web
 dev-web: ## Run the Next.js dev server on the host
@@ -92,6 +93,14 @@ migration: ## Autogenerate a migration: make migration m="add contacts"
 .PHONY: db-reset
 db-reset: ## Drop and recreate the schema (DESTROYS local data)
 	cd $(API) && $(UV) run alembic downgrade base && $(UV) run alembic upgrade head
+
+.PHONY: status-page
+status-page: ## Regenerate docs/status-page.html from live API data (then publish it)
+	$(UV) run --quiet python scripts/status-page.py
+
+.PHONY: devlog
+devlog: ## Regenerate docs/Sendox-Development-Log.docx from docs/DEVLOG.md
+	$(UV) run --quiet --with python-docx python scripts/devlog-docx.py
 
 .PHONY: verify
 verify: ## End-to-end localhost check of everything phase 0.1 delivers

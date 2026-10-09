@@ -46,8 +46,8 @@
       "id": "0.3",
       "name": "Web shell + NextAuth -> FastAPI JWT",
       "release": "R0",
-      "status": "planned",
-      "note": "Next up. The dev dashboard is a tool, not 0.3 \u2014 real auth still to come"
+      "status": "done",
+      "note": "Web shell with navigation, session context and an httpOnly-cookie session. NextAuth not used \u2014 see DEVLOG"
     },
     {
       "id": "0.4",
@@ -77,7 +77,8 @@
       "name": "User Authentication & Workspace Management",
       "release": "R1",
       "phase": "1.1",
-      "status": "planned"
+      "status": "done",
+      "note": "Registration + email confirmation, cookie sessions, password reset, workspaces, 4 roles, invitations, activity log, GDPR account deletion. TOTP 2FA deferred (FE-2 marks it optional)"
     },
     {
       "id": "M2",

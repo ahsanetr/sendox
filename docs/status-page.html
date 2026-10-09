@@ -1,0 +1,475 @@
+<title>Sendox Build Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #fafafc;
+    --surface: #ffffff;
+    --ink: #15171e;
+    --muted: #5c6270;
+    --faint: #878d9c;
+    --hair: #e3e5ec;
+    --hair-strong: #cfd3de;
+    --accent: #1f4fd8;
+    --done: #0e7a56;
+    --done-bg: #e8f5ef;
+    --partial: #8a5a00;
+    --partial-bg: #fdf2dd;
+    --planned: #767d8e;
+    --planned-bg: #eeeff4;
+    --bad: #b22731;
+    --term-bg: #12141a;
+    --term-ink: #cdd2de;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1014;
+      --surface: #161922;
+      --ink: #e7e9f0;
+      --muted: #9ba2b2;
+      --faint: #777f90;
+      --hair: #262b36;
+      --hair-strong: #343a47;
+      --accent: #8aa4ff;
+      --done: #46c795;
+      --done-bg: #102a21;
+      --partial: #e0ab46;
+      --partial-bg: #2a2114;
+      --planned: #8a91a1;
+      --planned-bg: #1d212a;
+      --bad: #ef6b74;
+      --term-bg: #0a0c10;
+      --term-ink: #c6cbd8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1014;
+    --surface: #161922;
+    --ink: #e7e9f0;
+    --muted: #9ba2b2;
+    --faint: #777f90;
+    --hair: #262b36;
+    --hair-strong: #343a47;
+    --accent: #8aa4ff;
+    --done: #46c795;
+    --done-bg: #102a21;
+    --partial: #e0ab46;
+    --partial-bg: #2a2114;
+    --planned: #8a91a1;
+    --planned-bg: #1d212a;
+    --bad: #ef6b74;
+    --term-bg: #0a0c10;
+    --term-ink: #c6cbd8;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 50rem;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 3rem 4rem;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(1.75rem, 5vw, 2.4rem); font-weight: 600; letter-spacing: -0.021em; }
+  h2 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.006em; }
+  h3 { font-size: 0.9375rem; font-weight: 600; }
+  p { margin: 0; }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* ---------- header ---------- */
+  header.top { display: flex; flex-direction: column; gap: 0.5rem; }
+  .lede {
+    margin-top: 0.75rem;
+    color: var(--muted);
+    max-width: 38rem;
+    font-size: 1.0625rem;
+  }
+  .stamp {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--faint);
+    border-top: 1px solid var(--hair);
+    padding-top: 0.75rem;
+  }
+
+  /* ---------- figures ---------- */
+  .figs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+    padding-block: 1.5rem;
+    border-top: 1px solid var(--hair-strong);
+    border-bottom: 1px solid var(--hair-strong);
+  }
+  @media (max-width: 30rem) { .figs { grid-template-columns: 1fr; gap: 1.25rem; } }
+  .fig .n {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 1.9rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    display: block;
+    line-height: 1.1;
+  }
+  .fig .l { display: block; margin-top: 0.3rem; font-size: 0.8125rem; color: var(--muted); }
+
+  section.blk { margin-top: 3rem; }
+  section.blk > h2 { padding-bottom: 0.6rem; border-bottom: 1px solid var(--hair); }
+  .sub { margin-top: 0.7rem; color: var(--muted); font-size: 0.9375rem; max-width: 40rem; }
+
+  /* ---------- terminal ---------- */
+  .term {
+    margin-top: 1rem;
+    background: var(--term-bg);
+    color: var(--term-ink);
+    border-radius: 6px;
+    overflow-x: auto;
+    padding: 1rem 1.15rem;
+  }
+  .term pre {
+    margin: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1.75;
+    white-space: pre;
+  }
+  .term .cmd { color: #7f8ba3; }
+  .v { display: inline-block; width: 3.1rem; font-weight: 500; }
+  .v.ok { color: #4ec08d; }
+  .v.skip { color: #d9a33a; }
+  .v.bad { color: #ef6b74; }
+  .vl { display: inline-block; min-width: 23rem; }
+  .vd { color: #7f8ba3; }
+  .vgroup { color: #e7e9f0; font-weight: 500; }
+  .vsum { color: #e7e9f0; font-weight: 500; }
+
+  /* ---------- works / gaps ---------- */
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.25rem; }
+  @media (max-width: 40rem) { .two { grid-template-columns: 1fr; gap: 1.75rem; } }
+  .two h3 { display: flex; align-items: baseline; gap: 0.5rem; }
+  .two ul { margin: 0.75rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+  .two li { font-size: 0.875rem; padding-left: 1rem; position: relative; color: var(--muted); }
+  .two li::before {
+    content: ""; position: absolute; left: 0; top: 0.5rem;
+    width: 5px; height: 5px; border-radius: 50%;
+  }
+  .two .yes li::before { background: var(--done); }
+  .two .no li::before { background: var(--hair-strong); }
+  .two li b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- rows ---------- */
+  ul.rows { list-style: none; margin: 0; padding: 0; }
+  .row {
+    display: grid;
+    grid-template-columns: 2.9rem 1fr auto auto;
+    align-items: baseline;
+    gap: 0.5rem 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .row.planned { opacity: 0.62; }
+  .rid {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem; color: var(--faint); font-variant-numeric: tabular-nums;
+  }
+  .rname { font-size: 0.875rem; min-width: 0; }
+  .note {
+    margin-top: 0.3rem; font-size: 0.75rem; color: var(--muted); line-height: 1.5;
+  }
+  .ph { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.6875rem; color: var(--faint); }
+  .chip {
+    font-size: 0.6875rem; font-weight: 500; padding: 0.1rem 0.45rem; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .chip.done { color: var(--done); background: var(--done-bg); }
+  .chip.partial { color: var(--partial); background: var(--partial-bg); }
+  .chip.planned { color: var(--planned); background: var(--planned-bg); }
+
+  .rel { margin-top: 2rem; }
+  .relhead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 1rem; }
+  .relid {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--accent); margin-right: 0.3rem;
+  }
+  .relmeta { font-size: 0.75rem; color: var(--faint); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  /* ---------- commits ---------- */
+  ul.commits { list-style: none; margin: 1rem 0 0; padding: 0; }
+  ul.commits li {
+    display: grid; grid-template-columns: 4.5rem 1fr auto; gap: 0.75rem;
+    align-items: baseline; padding: 0.55rem 0; border-bottom: 1px solid var(--hair);
+    font-size: 0.875rem;
+  }
+  @media (max-width: 34rem) {
+    ul.commits li { grid-template-columns: 4.5rem 1fr; }
+    .cdate { display: none; }
+  }
+  .sha { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.75rem; color: var(--accent); }
+  .cdate { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.75rem; color: var(--faint); }
+
+  /* ---------- blockers ---------- */
+  ol.blockers { margin: 1.25rem 0 0; padding: 0; list-style: none; counter-reset: b; }
+  ol.blockers li {
+    counter-increment: b; position: relative; padding-left: 2.1rem; margin-bottom: 1.1rem;
+    font-size: 0.9375rem; color: var(--muted);
+  }
+  ol.blockers li::before {
+    content: counter(b); position: absolute; left: 0; top: 0.05rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.75rem;
+    width: 1.4rem; height: 1.4rem; display: grid; place-items: center;
+    border: 1px solid var(--hair-strong); border-radius: 50%; color: var(--ink);
+  }
+  ol.blockers b { color: var(--ink); font-weight: 600; }
+
+  footer {
+    margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hair);
+    font-size: 0.8125rem; color: var(--faint);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  a:focus-visible, li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Final Year Project · COMSATS University Islamabad</p>
+    <h1>Sendox — build status</h1>
+    <p class="lede">
+      AI-native multi-channel marketing platform for Shopify brands. This is a snapshot of
+      what is implemented and independently verified, taken from the running system — not a
+      plan of intent.
+    </p>
+    <div class="stamp">
+      <span>snapshot 9 Oct 2026</span>
+      <span>local development build</span>
+      <span>not yet deployed</span>
+      <span>due end of May 2027</span>
+    </div>
+  </header>
+
+  <div class="figs">
+    <div class="fig">
+      <span class="n">6<span style="color:var(--faint)">/31</span></span>
+      <span class="l">build items complete, plus 2 partial — across 6 foundation phases and 25 scope modules</span>
+    </div>
+    <div class="fig">
+      <span class="n">71</span>
+      <span class="l">automated tests passing, including 7 that prove workspace data cannot leak</span>
+    </div>
+    <div class="fig">
+      <span class="n">32<span style="color:var(--faint)">/34</span></span>
+      <span class="l">end-to-end checks against live services, run by one command; 2 skipped for optional dependencies</span>
+    </div>
+  </div>
+
+  <section class="blk">
+    <h2>Verified, not asserted</h2>
+    <p class="sub">
+      A single command exercises every claim below against the running stack and prints a verdict
+      per check. This is its unedited output. The same script runs in continuous integration, so
+      local results and CI results cannot drift apart.
+    </p>
+    <div class="term">
+      <pre><span class="cmd">$ make verify</span>
+
+<span class="vgroup">API</span>
+<span class="v ok">PASS</span><span class="vl">root endpoint identifies the service</span><span class="vd">v0.1.0</span>
+<span class="v ok">PASS</span><span class="vl">liveness probe</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">readiness: all backing services ok</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">  └ postgres                               7</span><span class="vd">.3 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ redis                                  9</span><span class="vd">.5 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ chromadb                               8</span><span class="vd">.6 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ mjml                                   5</span><span class="vd">.1 ms</span>
+
+<span class="vgroup">Build status</span>
+<span class="v ok">PASS</span><span class="vl">manifest covers all 25 scope modules</span><span class="vd">6/31 items done</span>
+
+<span class="vgroup">Database &amp; tenant isolation</span>
+<span class="v ok">PASS</span><span class="vl">migrations applied</span><span class="vd">revision 664af33cb71f</span>
+<span class="v ok">PASS</span><span class="vl">app session is not a superuser</span><span class="vd">role=sendox_app</span>
+<span class="v ok">PASS</span><span class="vl">every tenant-scoped table has an RLS policy</span><span class="vd">audit_logs,memberships</span>
+<span class="v ok">PASS</span><span class="vl">tenant isolation enforced</span><span class="vd"></span>
+
+<span class="vgroup">Queue (Redis + Celery worker)</span>
+<span class="v ok">PASS</span><span class="vl">task enqueued and executed by a worker</span><span class="vd">89855e70…</span>
+
+<span class="vgroup">MJML renderer</span>
+<span class="v ok">PASS</span><span class="vl">sidecar health endpoint</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">API compiles a sample email via the sidecar</span><span class="vd">5626 bytes, responsive</span>
+<span class="v ok">PASS</span><span class="vl">invalid MJML reported as errors, not a crash</span><span class="vd"></span>
+
+<span class="vgroup">Accounts &amp; workspaces (M1)</span>
+<span class="v ok">PASS</span><span class="vl">registration creates an unconfirmed account</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">sign-in refused until the email is confirmed</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">session cookie is httpOnly</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">a confirmation link works only once</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">the creator of a workspace is its owner</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">the session cookie alone authenticates</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">a non-member cannot see a workspace exists</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">an invitation grants access</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">a viewer cannot change workspace settings</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">a workspace cannot lose its last owner</span><span class="vd"></span>
+<span class="v ok">PASS</span><span class="vl">workspace activity is recorded</span><span class="vd">3 entries</span>
+<span class="v ok">PASS</span><span class="vl">a deleted account can no longer be used</span><span class="vd"></span>
+
+<span class="vgroup">Brand knowledge vector store</span>
+<span class="v ok">PASS</span><span class="vl">sample brand content embedded</span><span class="vd">5 chunks, 384d</span>
+<span class="v ok">PASS</span><span class="vl">semantic search retrieves by meaning</span><span class="vd">top hit &#x27;shipping&#x27; @ 0.6005</span>
+
+<span class="vgroup">Claude API</span>
+<span class="v skip">SKIP</span><span class="vl">Claude round-trip</span><span class="vd">ANTHROPIC_API_KEY not set (model would be claude-sonnet-5)</span>
+
+<span class="vgroup">Services reachable directly</span>
+<span class="v ok">PASS</span><span class="vl">ChromaDB heartbeat (v2 API)</span><span class="vd"></span>
+<span class="v skip">SKIP</span><span class="vl">Mailpit web UI</span><span class="vd">Docker-only; not available under make up-native</span>
+
+<span class="vgroup">Web dashboard</span>
+<span class="v ok">PASS</span><span class="vl">dashboard renders</span><span class="vd">http://localhost:3000</span>
+
+<span class="vsum">Summary  32 passed, 0 failed, 2 skipped</span>
+<span class="v ok" style="padding:0">All required checks passed.</span></pre>
+    </div>
+  </section>
+
+  <section class="blk">
+    <h2>Where the project stands</h2>
+    <div class="two">
+      <div>
+        <h3>Working <span class="eyebrow">verified</span></h3>
+        <ul class="yes">
+          <li><b>Infrastructure.</b> Eight-service stack (API, workers, Postgres, Redis, vector database, email renderer, mail capture) booting from one command, with CI.</li>
+          <li><b>Workspace data isolation.</b> Enforced inside Postgres: a query that forgets to filter by workspace returns nothing rather than another brand's data.</li>
+          <li><b>Brand knowledge retrieval.</b> Content is embedded locally and searched by meaning — asking "can I send something back?" returns the returns policy, which shares none of those words.</li>
+          <li><b>Email rendering.</b> Produces responsive HTML that holds up across mail clients; invalid input is reported with line numbers rather than crashing.</li>
+          <li><b>Background job queue.</b> Proven end to end, which is what makes timed automation possible later.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Not built yet <span class="eyebrow">23 modules</span></h3>
+        <ul class="no">
+          <li><b>Accounts and login.</b> No authentication yet — next piece of work.</li>
+          <li><b>Shopify connection.</b> Blocked on partner app credentials.</li>
+          <li><b>The AI agents.</b> Strategy, copywriting, design and optimisation — transport is ready, no generation yet.</li>
+          <li><b>Campaigns, flows, sending and tracking.</b> Nothing is delivered to a real inbox yet.</li>
+          <li><b>SMS and WhatsApp.</b> Scheduled for March–April 2027; sender registration must start months earlier.</li>
+          <li><b>Billing, signup forms, analytics.</b> Final release.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk">
+    <h2>Foundation</h2>
+    <p class="sub">
+      Groundwork rather than features: the parts every module depends on. Numbering follows the
+      project build plan.
+    </p>
+    <ul class="rows"><li class="row done"><span class="rid">0.1</span><span class="rname">Monorepo, compose stack, CI<p class="note">8 services healthy; ruff + mypy strict + 10 tests + 3 MJML tests green</p></span><span class="chip done">done</span></li>
+<li class="row done"><span class="rid">0.2</span><span class="rname">Alembic, tenants/users schema, Postgres RLS<p class="note">Alembic + tenants/users/memberships/audit_logs; RLS enforced via a non-superuser app role, proven by 7 isolation tests</p></span><span class="chip done">done</span></li>
+<li class="row done"><span class="rid">0.3</span><span class="rname">Web shell + NextAuth -&gt; FastAPI JWT<p class="note">Web shell with navigation, session context and an httpOnly-cookie session. NextAuth not used — see DEVLOG</p></span><span class="chip done">done</span></li>
+<li class="row done"><span class="rid">0.4</span><span class="rname">Celery worker + beat round-trip<p class="note">Landed early with 0.1: sendox.ping enqueued from the API returns SUCCESS</p></span><span class="chip done">done</span></li>
+<li class="row done"><span class="rid">0.5</span><span class="rname">Anthropic + Chroma smoke harness<p class="note">Vector store client (collection per tenant) + Claude client. Embeddings run locally via ONNX MiniLM, 384 dims, no API key</p></span><span class="chip done">done</span></li>
+<li class="row planned"><span class="rid">0.6</span><span class="rname">Long-lead items filed (SES, Shopify, SMS, WhatsApp)<p class="note">Blocks R1 sending and R3 channels. Not a coding task</p></span><span class="chip planned">planned</span></li></ul>
+  </section>
+
+  <section class="blk">
+    <h2>The 25 scope modules</h2>
+    <p class="sub">
+      Grouped by the release that delivers them. Each release is a working system rather than a
+      layer, so the same path through the product gets deeper each time instead of longer.
+    </p>
+    
+      <section class="rel">
+        <header class="relhead">
+          <h3><span class="relid">R1</span> It sends</h3>
+          <p class="relmeta">22 Oct - 24 Dec 2026 · 13 modules · 3 started</p>
+        </header>
+        <ul class="rows"><li class="row done"><span class="rid">M1</span><span class="rname">User Authentication &amp; Workspace Management<p class="note">Registration + email confirmation, cookie sessions, password reset, workspaces, 4 roles, invitations, activity log, GDPR account deletion. TOTP 2FA deferred (FE-2 marks it optional)</p></span><span class="ph">1.1</span><span class="chip done">done</span></li>
+<li class="row planned"><span class="rid">M3</span><span class="rname">Shopify Connection &amp; Data Synchronization</span><span class="ph">1.2</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M5</span><span class="rname">Contact Database &amp; Behavioral Event Store</span><span class="ph">1.3</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M6</span><span class="rname">Brand Onboarding &amp; Context Extraction</span><span class="ph">1.4</span><span class="chip planned">planned</span></li>
+<li class="row partial"><span class="rid">M7</span><span class="rname">Brand Knowledge Vectorization &amp; Storage<p class="note">Vector store, embeddings, upsert and semantic search working. Chunking pipeline, brand-profile schema and KB versioning not started</p></span><span class="ph">1.5</span><span class="chip partial">partial</span></li>
+<li class="row planned"><span class="rid">M8</span><span class="rname">RAG Retrieval &amp; Prompt Assembly Pipeline<p class="note">Retrieval half works via the vector store client; prompt assembly and re-ranking not started</p></span><span class="ph">1.6</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M10</span><span class="rname">Copywriting Agent</span><span class="ph">1.7</span><span class="chip planned">planned</span></li>
+<li class="row partial"><span class="rid">M11</span><span class="rname">Design Agent &amp; MJML Email Renderer<p class="note">MJML render service built and working in 0.1. Layout library and AI layout selection not started</p></span><span class="ph">1.8</span><span class="chip partial">partial</span></li>
+<li class="row planned"><span class="rid">M12</span><span class="rname">AI Content Validation &amp; Approval Layer</span><span class="ph">1.9</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M13</span><span class="rname">Campaign Engine (Email, SMS &amp; WhatsApp)</span><span class="ph">1.13</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M16</span><span class="rname">Domain Authentication &amp; Email Send Pipeline</span><span class="ph">1.10</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M17</span><span class="rname">Engagement &amp; Performance Tracking</span><span class="ph">1.11</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M18</span><span class="rname">Bounce, Complaint &amp; Unsubscribe Handling</span><span class="ph">1.12</span><span class="chip planned">planned</span></li></ul>
+      </section>
+      <section class="rel">
+        <header class="relhead">
+          <h3><span class="relid">R2</span> It runs itself</h3>
+          <p class="relmeta">5 Jan - 28 Feb 2027 · 4 modules · 0 started</p>
+        </header>
+        <ul class="rows"><li class="row planned"><span class="rid">M4</span><span class="rname">Webhook Events Processing</span><span class="ph">2.1</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M9</span><span class="rname">Strategy Agent (AI Campaign Planner)</span><span class="ph">2.4</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M14</span><span class="rname">Flow Engine (Multi-Channel)</span><span class="ph">2.2</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M22</span><span class="rname">Analytics &amp; Performance Insights Dashboard</span><span class="ph">2.5</span><span class="chip planned">planned</span></li></ul>
+      </section>
+      <section class="rel">
+        <header class="relhead">
+          <h3><span class="relid">R3</span> It learns + multi-channel</h3>
+          <p class="relmeta">1 Mar - 25 Apr 2027 · 5 modules · 0 started</p>
+        </header>
+        <ul class="rows"><li class="row planned"><span class="rid">M19</span><span class="rname">Optimization Agent &amp; Closed-Loop Learning</span><span class="ph">3.1</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M20</span><span class="rname">Predictive Customer Intelligence Engine</span><span class="ph">3.5</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M23</span><span class="rname">SMS Channel Infrastructure</span><span class="ph">3.2</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M24</span><span class="rname">WhatsApp Business Channel</span><span class="ph">3.3</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M25</span><span class="rname">Cross-Channel Orchestration &amp; Consent</span><span class="ph">3.4</span><span class="chip planned">planned</span></li></ul>
+      </section>
+      <section class="rel">
+        <header class="relhead">
+          <h3><span class="relid">R4</span> It&#x27;s a product</h3>
+          <p class="relmeta">26 Apr - 23 May 2027 · 3 modules · 0 started</p>
+        </header>
+        <ul class="rows"><li class="row planned"><span class="rid">M2</span><span class="rname">Subscription Billing &amp; Plan Management</span><span class="ph">4.1</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M15</span><span class="rname">Signup Forms &amp; Subscriber Growth</span><span class="ph">4.2</span><span class="chip planned">planned</span></li>
+<li class="row planned"><span class="rid">M21</span><span class="rname">Conversational AI Marketing Copilot</span><span class="ph">4.3</span><span class="chip planned">planned</span></li></ul>
+      </section>
+  </section>
+
+  <section class="blk">
+    <h2>History</h2>
+    <ul class="commits"><li><span class="sha">62ed9ab</span><span class="csub">Phase 0.5: brand knowledge vector store and Claude client</span><span class="cdate">2026-10-08</span></li>
+<li><span class="sha">14216ae</span><span class="csub">Phase 0.2: schema, migrations, and Postgres-enforced tenant isolation</span><span class="cdate">2026-10-08</span></li>
+<li><span class="sha">6241bc2</span><span class="csub">Phase 0.1 + 0.4: monorepo skeleton, compose stack, CI, dev dashboard</span><span class="cdate">2026-10-08</span></li></ul>
+  </section>
+
+  <section class="blk">
+    <h2>What would unblock the next step</h2>
+    <ol class="blockers">
+      <li><b>Shopify Partner app credentials and a development store.</b> Connecting a real store is the next milestone, and it cannot be tested without them.</li>
+      <li><b>An Anthropic API key.</b> Every AI feature is inert until one is configured; the system degrades cleanly without it, which is why one check above is skipped rather than failing.</li>
+      <li><b>Long-lead approvals, started now.</b> Amazon SES production access takes up to three weeks and can be refused. SMS sender registration takes four to eight weeks and WhatsApp business verification three to six — both gate the March–April 2027 release, so filing them in March is already too late.</li>
+    </ol>
+  </section>
+
+  <footer>
+    Source: <a href="https://github.com/ahsanetr/sendox">github.com/ahsanetr/sendox</a> (private).
+    Figures on this page were taken from the running system on 8 October 2026 and are a point-in-time
+    snapshot, not a live feed.
+  </footer>
+</div>

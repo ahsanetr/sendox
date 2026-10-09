@@ -180,6 +180,133 @@ else
   bad "invalid MJML reported as errors, not a crash"
 fi
 
+# ------------------------------------------------ accounts, workspaces, roles
+section "Accounts & workspaces (M1)"
+
+STAMP=$(date +%s)
+OWNER_EMAIL="verify-owner-$STAMP@example.com"
+GUEST_EMAIL="verify-guest-$STAMP@example.com"
+PASSWORD="VerifyRun2026"
+JAR="/tmp/sendox-verify-jar.txt"
+rm -f "$JAR"
+
+reg=$(curl -fsS --max-time 15 -X POST "$API/auth/register" \
+  -H 'content-type: application/json' \
+  -d "{\"email\":\"$OWNER_EMAIL\",\"password\":\"$PASSWORD\",\"workspace_name\":\"Verify Brand\"}" 2>/dev/null)
+
+if [ -n "$reg" ]; then
+  verified=$(printf '%s' "$reg" | jsonq 'd["user"]["email_verified"]')
+  vtoken=$(printf '%s' "$reg" | jsonq 'd["dev_verification_token"] or ""')
+  [ "$verified" = "False" ] \
+    && ok "registration creates an unconfirmed account" \
+    || bad "registration creates an unconfirmed account"
+else
+  bad "registration" "endpoint failed"
+  vtoken=""
+fi
+
+# The credentials are right but the address is unconfirmed: 403, not 401.
+code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' -X POST "$API/auth/login" \
+  -H 'content-type: application/json' \
+  -d "{\"email\":\"$OWNER_EMAIL\",\"password\":\"$PASSWORD\"}" 2>/dev/null)
+[ "$code" = "403" ] \
+  && ok "sign-in refused until the email is confirmed" \
+  || bad "sign-in refused until the email is confirmed" "got HTTP $code"
+
+if [ -n "$vtoken" ]; then
+  headers=$(curl -sS --max-time 15 -D - -o /tmp/sendox-verify.json -c "$JAR" \
+    -X POST "$API/auth/verify-email" -H 'content-type: application/json' \
+    -d "{\"token\":\"$vtoken\"}" 2>/dev/null)
+
+  printf '%s' "$headers" | grep -qi 'set-cookie:.*httponly' \
+    && ok "session cookie is httpOnly" \
+    || bad "session cookie is httpOnly" "an XSS bug could steal the session"
+
+  # Replaying a consumed link must fail.
+  code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' -X POST "$API/auth/verify-email" \
+    -H 'content-type: application/json' -d "{\"token\":\"$vtoken\"}" 2>/dev/null)
+  [ "$code" = "400" ] \
+    && ok "a confirmation link works only once" \
+    || bad "a confirmation link works only once" "got HTTP $code"
+
+  OWNER_TOKEN=$(jsonq 'd["access_token"]' < /tmp/sendox-verify.json)
+else
+  bad "email confirmation" "no token returned"
+  OWNER_TOKEN=""
+fi
+
+if [ -n "$OWNER_TOKEN" ]; then
+  auth="Authorization: Bearer $OWNER_TOKEN"
+  curl -fsS --max-time 10 "$API/auth/me" -H "$auth" -o /tmp/sendox-me.json 2>/dev/null
+  role=$(jsonq 'd["workspaces"][0]["role"] if d["workspaces"] else ""' < /tmp/sendox-me.json)
+  WS=$(jsonq 'd["workspaces"][0]["id"] if d["workspaces"] else ""' < /tmp/sendox-me.json)
+  [ "$role" = "owner" ] \
+    && ok "the creator of a workspace is its owner" \
+    || bad "the creator of a workspace is its owner" "role=$role"
+
+  # The cookie alone must authenticate, with no bearer header at all.
+  code=$(curl -sS --max-time 10 -b "$JAR" -o /dev/null -w '%{http_code}' "$API/auth/me" 2>/dev/null)
+  [ "$code" = "200" ] \
+    && ok "the session cookie alone authenticates" \
+    || bad "the session cookie alone authenticates" "got HTTP $code"
+
+  # A second account that is not a member must not even learn it exists.
+  greg=$(curl -fsS --max-time 15 -X POST "$API/auth/register" \
+    -H 'content-type: application/json' \
+    -d "{\"email\":\"$GUEST_EMAIL\",\"password\":\"$PASSWORD\"}" 2>/dev/null)
+  gtoken=$(printf '%s' "$greg" | jsonq 'd["dev_verification_token"] or ""')
+  GUEST_TOKEN=$(curl -fsS --max-time 15 -X POST "$API/auth/verify-email" \
+    -H 'content-type: application/json' -d "{\"token\":\"$gtoken\"}" 2>/dev/null | jsonq 'd["access_token"]')
+
+  code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "$API/workspaces/$WS" \
+    -H "Authorization: Bearer $GUEST_TOKEN" 2>/dev/null)
+  [ "$code" = "404" ] \
+    && ok "a non-member cannot see a workspace exists" \
+    || bad "a non-member cannot see a workspace exists" "got HTTP $code"
+
+  # Invite the guest as a viewer, then confirm the role is actually enforced.
+  itoken=$(curl -fsS --max-time 15 -X POST "$API/workspaces/$WS/invitations" -H "$auth" \
+    -H 'content-type: application/json' \
+    -d "{\"email\":\"$GUEST_EMAIL\",\"role\":\"viewer\"}" 2>/dev/null \
+    | jsonq 'd["dev_invitation_token"] or ""')
+  curl -fsS --max-time 10 -X POST "$API/invitations/accept" \
+    -H "Authorization: Bearer $GUEST_TOKEN" -H 'content-type: application/json' \
+    -d "{\"token\":\"$itoken\"}" >/dev/null 2>&1 \
+    && ok "an invitation grants access" \
+    || bad "an invitation grants access"
+
+  code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' -X PATCH "$API/workspaces/$WS" \
+    -H "Authorization: Bearer $GUEST_TOKEN" -H 'content-type: application/json' \
+    -d '{"name":"Hijacked"}' 2>/dev/null)
+  [ "$code" = "403" ] \
+    && ok "a viewer cannot change workspace settings" \
+    || bad "a viewer cannot change workspace settings" "got HTTP $code"
+
+  # A workspace must never be left without an owner.
+  OWNER_ID=$(jsonq 'd["user"]["id"]' < /tmp/sendox-me.json)
+  code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' \
+    -X PATCH "$API/workspaces/$WS/members/$OWNER_ID" -H "$auth" \
+    -H 'content-type: application/json' -d '{"role":"admin"}' 2>/dev/null)
+  [ "$code" = "409" ] \
+    && ok "a workspace cannot lose its last owner" \
+    || bad "a workspace cannot lose its last owner" "got HTTP $code"
+
+  entries=$(curl -fsS --max-time 10 "$API/workspaces/$WS/audit" -H "$auth" 2>/dev/null \
+    | jsonq 'len(d)')
+  [ "${entries:-0}" -ge 3 ] \
+    && ok "workspace activity is recorded" "$entries entries" \
+    || bad "workspace activity is recorded" "only ${entries:-0} entries"
+
+  # Leave the database as it was found.
+  curl -sS --max-time 15 -X DELETE "$API/auth/me" -H "Authorization: Bearer $GUEST_TOKEN" >/dev/null 2>&1
+  curl -sS --max-time 15 -X DELETE "$API/auth/me" -H "$auth" >/dev/null 2>&1
+  code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "$API/auth/me" -H "$auth" 2>/dev/null)
+  [ "$code" = "401" ] \
+    && ok "a deleted account can no longer be used" \
+    || bad "a deleted account can no longer be used" "got HTTP $code"
+fi
+rm -f "$JAR"
+
 # ------------------------------------------------- vector store (brand knowledge)
 section "Brand knowledge vector store"
 

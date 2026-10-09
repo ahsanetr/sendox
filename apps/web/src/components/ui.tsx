@@ -93,6 +93,51 @@ export function Button({
   );
 }
 
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{label}</span>
+      {children}
+      {hint && <span className="text-xs text-zinc-500 dark:text-zinc-400">{hint}</span>}
+    </label>
+  );
+}
+
+export const inputClass =
+  "w-full rounded-md border border-zinc-300 bg-transparent px-2.5 py-1.5 text-sm outline-none transition focus:border-zinc-500 disabled:opacity-50 dark:border-zinc-700";
+
+export function Note({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-md bg-sky-500/10 px-3 py-2 text-xs text-sky-800 ring-1 ring-inset ring-sky-600/20 dark:text-sky-300">
+      {children}
+    </p>
+  );
+}
+
+export function RoleBadge({ role }: { role: string }) {
+  const tone: Record<string, string> = {
+    owner: "bg-violet-500/10 text-violet-700 ring-violet-600/20 dark:text-violet-300",
+    admin: "bg-sky-500/10 text-sky-700 ring-sky-600/20 dark:text-sky-300",
+    editor: "bg-teal-500/10 text-teal-700 ring-teal-600/20 dark:text-teal-300",
+    viewer: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-400",
+  };
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${tone[role] ?? tone.viewer}`}
+    >
+      {role}
+    </span>
+  );
+}
+
 export function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
     <p className="rounded-md bg-rose-500/10 px-3 py-2 text-xs text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:text-rose-400">

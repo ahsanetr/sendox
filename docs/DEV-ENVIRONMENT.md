@@ -103,6 +103,24 @@ call the sync versions directly. The same applies to SQLAlchemy, which is synchr
 `tests/test_event_loop.py` pins it: a health check must answer in under three seconds while a seed
 is in flight.
 
+## Celery's prefork pool does not work on the macOS host
+
+A worker started with the default pool accepts tasks and fails every one of them with:
+
+```
+ValueError: not enough values to unpack (expected 3, got 0)
+```
+
+...from inside Celery's `fast_trace_task`. The forked child never gets the worker-optimisation state
+set up — a macOS fork-safety problem, not a bug in our code. The identical worker is fine inside the
+Docker image, which is Linux.
+
+So `make dev-worker` runs `--pool=threads --concurrency=4`. Our work is I/O bound (SMTP, HTTP to
+Shopify and Anthropic, database), so threads are a good fit anyway. **Compose keeps the default
+prefork pool**, because that is what production will run and we want CI exercising it.
+
+If you start a worker by hand, pass `--pool=threads` or tasks will fail in a confusing way.
+
 ## Local service versions differ from compose
 
 `make up-native` uses the machine's Homebrew Postgres **15**; compose pins **16**. Everything we use

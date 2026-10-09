@@ -31,11 +31,19 @@ if ! "$PG_BIN/pg_isready" -q -h 127.0.0.1 -p 5432 2>/dev/null; then
 fi
 
 # Idempotent: role and database are created only if absent.
+#
+# CREATEROLE matters: the initial migration creates the non-superuser `sendox_app`
+# role that row-level security depends on, and grants it to the connecting role.
+# Under Docker the connecting role is the bootstrap superuser and can do both; a
+# plain Homebrew role cannot, so it is granted CREATEROLE here instead of giving
+# the application superuser (which would disable RLS entirely).
 "$PG_BIN/psql" -d postgres -v ON_ERROR_STOP=1 -q <<'SQL'
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sendox') THEN
-    CREATE ROLE sendox LOGIN PASSWORD 'sendox';
+    CREATE ROLE sendox LOGIN PASSWORD 'sendox' CREATEROLE;
+  ELSE
+    ALTER ROLE sendox CREATEROLE;
   END IF;
 END
 $$;
@@ -93,5 +101,6 @@ local mail capture, or point SMTP at a real sandbox when phase 1.10 needs it.
 
 Next:
   make dev-api      # API on http://localhost:8000
+  make dev-worker   # Celery worker (threads pool on macOS)
   make health       # readiness report, expect all four checks "ok"
 NEXT

@@ -3,10 +3,14 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # src/sendox_api/config.py -> apps/api -> apps -> repo root
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# RFC 7518 section 3.2: an HS256 key must be at least as long as the hash output.
+MIN_JWT_SECRET_BYTES = 32
 
 
 class Settings(BaseSettings):
@@ -36,8 +40,19 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     web_base_url: str = "http://localhost:3000"
 
-    # Auth (wired up in phase 0.3)
-    jwt_secret: str = "dev-only-change-me"
+    # Auth. The default is long enough to satisfy HS256's 32-byte minimum and
+    # obviously unusable in production, where `_reject_weak_secrets` refuses it.
+    jwt_secret: str = "dev-only-insecure-secret-change-me-before-deploying"
+    session_cookie_name: str = "sendox_session"
+
+    # Mail. Defaults point at Mailpit in docker-compose; phase 1.10 swaps the host
+    # for Amazon SES, which also speaks SMTP, so nothing else changes here.
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = False
+    mail_from: str = "Sendox <no-reply@sendox.local>"
 
     # AI (wired up in phase 0.5)
     anthropic_api_key: str | None = None
@@ -46,6 +61,30 @@ class Settings(BaseSettings):
 
     # Observability
     sentry_dsn: str | None = None
+
+    @model_validator(mode="after")
+    def _reject_weak_secrets(self) -> "Settings":
+        """Refuse to start a production app with a weak or default signing key.
+
+        HS256 needs at least 32 bytes of key material; anything shorter weakens
+        every session token the platform issues. Failing at startup is far better
+        than discovering it from a forged token later.
+        """
+        if not self.is_production:
+            return self
+
+        if self.jwt_secret.startswith("dev-only"):
+            raise ValueError(
+                "JWT_SECRET is still the development default. "
+                "Generate one with: openssl rand -base64 48"
+            )
+        if len(self.jwt_secret.encode()) < MIN_JWT_SECRET_BYTES:
+            raise ValueError(
+                f"JWT_SECRET must be at least {MIN_JWT_SECRET_BYTES} bytes for HS256; "
+                f"got {len(self.jwt_secret.encode())}. "
+                "Generate one with: openssl rand -base64 48"
+            )
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

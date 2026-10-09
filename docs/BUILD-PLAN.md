@@ -112,7 +112,8 @@ Each phase ends with a demo, not a checkbox. If the demo can't be shown, the pha
 
 ### R0 — Skeleton · 8–21 Oct
 
-Status: **0.1 and 0.4 done**; 0.2 is next. Live state is always at `/status/modules`, rendered on
+Status: **R0 complete except 0.6** (the long-lead filings, which are not a coding task), and
+**M1 done**. 0.6 is yours; the next code is phase 1.2, Shopify connect, which needs credentials. Live state is always at `/status/modules`, rendered on
 the dev dashboard at `localhost:3000` — that, not this table, is the source of truth for progress.
 
 | # | Phase | Exit criteria |
@@ -121,7 +122,7 @@ the dev dashboard at `localhost:3000` — that, not this table, is the source of
 | 0.2 | DB foundation: Alembic, `tenants`/`users`, RLS policies | a test proves cross-tenant reads fail |
 | 0.3 | Next.js shell + API client + auth (NextAuth credentials → FastAPI, JWT verified server-side) | log in, see a page with tenant-scoped data from FastAPI |
 | 0.4 | ✅ Celery worker + beat wired end to end | job enqueued from API, executed, result visible in UI |
-| 0.5 | Anthropic + Chroma smoke harness | script prints a Claude completion grounded in a retrieved chunk |
+| 0.5 | ✅ Anthropic + Chroma clients | vector store working end to end; Claude awaits an API key |
 | 0.6 | Every §3 long-lead item filed | SES request submitted, dev store seeded, `.env.example` complete |
 
 **0.1 verified in full.** `make up` boots all eight services healthy, `/health/ready` returns 200

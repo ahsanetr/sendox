@@ -9,6 +9,8 @@ RAG pipeline, with a closed feedback loop from real engagement data.
 
 - **Scope (requirements):** `Sendox_Scope_Updated.docx` — 25 modules, FE-level requirements
 - **Build plan (execution):** [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) — releases, phases, cut order, risks
+- **Development log:** [`docs/DEVLOG.md`](docs/DEVLOG.md) — what was built, why, and what broke.
+  `make devlog` renders it to `docs/Sendox-Development-Log.docx`
 - **Dev environment gotchas:** [`docs/DEV-ENVIRONMENT.md`](docs/DEV-ENVIRONMENT.md) — read this before debugging a machine setup problem
 
 ---
@@ -40,7 +42,8 @@ Docker (first required in phase 1.10).
 
 | What | Where |
 |---|---|
-| Dev dashboard | http://localhost:3000 — live service health, capability checks, build status |
+| Dev dashboard | http://localhost:3000 — service health, capability checks, build status |
+| Accounts & workspaces | http://localhost:3000/account — sign up, workspaces, roles, invitations |
 | API docs | http://localhost:8000/docs |
 | Readiness report | http://localhost:8000/health/ready |
 | Database + isolation state | http://localhost:8000/status/database |
@@ -67,7 +70,7 @@ failing. `make test` is the separate unit-test run.
 ## Testing the API by hand
 
 ```bash
-make test-api                                    # 36 tests (integration ones need the stack up)
+make test-api                                    # 71 tests (integration ones need the stack up)
 curl -s localhost:8000/health/live               # {"status":"ok","version":"0.1.0"}
 curl -s localhost:8000/health/ready | jq         # per-dependency status + latency
 open http://localhost:8000/docs                  # interactive Swagger UI
@@ -187,6 +190,35 @@ curl -X POST localhost:8000/dev/vectors/query -H 'content-type: application/json
 
 The sample content mentions neither "send" nor "back" — matching happens by meaning, which is the
 whole point of the RAG pipeline in M8.
+
+## Accounts, workspaces and roles
+
+Sign up at `/account`. Registration sends a confirmation link; in development the API returns the
+token directly in the response (`dev_verification_token`), so no mail server is needed — in
+production that field is always `null` and a test asserts it.
+
+Sessions are JWTs in **httpOnly** cookies, so no page script can read them; a `Bearer` header works
+too, for scripts and `/docs`. Four roles rank `viewer < editor < admin < owner`. Two rules are
+enforced in the service layer and covered by tests: only an owner may create or unmake another
+owner, and a workspace can never lose its last owner.
+
+A non-member asking for a workspace gets **404, not 403** — a 403 would confirm it exists.
+
+**Deviation from the scope document:** NextAuth.js is not used. Its value is third-party identity
+providers, which Sendox does not need (Shopify OAuth is app installation, not user login). Session
+handling lives in `apps/web/src/lib/session.tsx`; swapping in NextAuth later touches only that
+module. See `docs/DEVLOG.md` for the reasoning.
+
+## Two status surfaces, kept in step
+
+| Surface | Command | Audience |
+|---|---|---|
+| `http://localhost:3000` | `make dev-web` | day-to-day development; queries the API live |
+| `docs/status-page.html` | `make status-page` | supervisor and partners, who cannot reach localhost |
+
+The status page is generated from `/status/modules`, `/status/database` and the output of
+`scripts/verify.sh`, so no figure is ever retyped. Regenerate and republish it whenever a phase
+lands, alongside `make devlog`.
 
 ## Conventions
 

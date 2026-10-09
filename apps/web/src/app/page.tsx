@@ -12,11 +12,13 @@ export default function DashboardPage() {
         <p className="font-mono text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
           Internal dev dashboard
         </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Sendox</h1>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight">System</h1>
         <p className="mt-2 max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
           AI-native multi-channel marketing platform for Shopify brands. This page
-          shows what is actually wired up and working — not what the plan says
-          should be. Everything below queries the live backend.
+          shows what is actually wired up and working — not what the plan says should
+          be. Everything below queries the live backend. Accounts and workspaces live
+          on the <a className="underline hover:no-underline" href="/account">
+          Account &amp; workspaces</a> page.
         </p>
       </header>
 
