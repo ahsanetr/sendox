@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "22"
+
+jobs:
+  api:
+    name: API — lint, types, tests
+    runs-on: ubuntu-latest
+    # Services are up from phase 0.1 so the integration tests added in 0.2
+    # (RLS isolation) and 0.4 (Celery round-trip) need no workflow changes.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sendox
+          POSTGRES_PASSWORD: sendox
+          POSTGRES_DB: sendox
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sendox -d sendox"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://sendox:sendox@localhost:5432/sendox
+      REDIS_URL: redis://localhost:6379/0
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --extra ai --frozen
+
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Type check
+        run: uv run mypy src
+
+      - name: Tests
+        run: uv run pytest -q
+
+  web:
+    name: Web — lint, types, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint:web
+
+      - name: Build
+        run: pnpm build:web
+
+  mjml:
+    name: MJML renderer — tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - name: Tests
+        working-directory: services/mjml
+        run: node --test
+
+  compose:
+    name: Compose stack boots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate compose file
+        run: docker compose config --quiet
+
+      - name: Boot the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Wait for the API to answer
+        run: |
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8000/health/live >/dev/null 2>&1 && exit 0
+            sleep 3
+          done
+          echo "API never became ready"; exit 1
+
+      # Same script developers run locally, so CI and local cannot drift.
+      # The web dashboard check reports SKIP here; everything else must pass.
+      - name: Verify the stack end to end
+        run: ./scripts/verify.sh
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
