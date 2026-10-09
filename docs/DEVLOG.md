@@ -443,6 +443,95 @@ Three attempts to get a usable key, each failing differently and each worth know
 Every AI feature from here (M9 Strategy, M10 Copywriting, M12 Validation, M19 Optimization) runs
 through `clients/claude.py`, so this unblocks all of them.
 
+## Phase 1.2 (M3) — Shopify connect · 9 Oct 2026
+
+**Goal:** a merchant installs Sendox on their own store and approves what it may read — the same
+flow Klaviyo uses.
+
+### Custom app vs Partner app — the decision that shaped this
+
+Shopify offers two app types and they are not interchangeable:
+
+| | Custom app | Partner app |
+|---|---|---|
+| Created in | one store's admin | partners.shopify.com |
+| Installs on | **that store only, ever** | any store that approves it |
+| Auth | a token the owner copies | OAuth |
+| Needs a public URL | no | **yes** |
+
+A custom app can never become a product merchants sign up for — every merchant would have to create
+their own app and paste a token in. **Partner app**, therefore, which is what the scope document
+already implies (M3 FE-1 OAuth, FE-3 multi-store).
+
+The cost is that Shopify will not redirect to `localhost`, so development needs a public HTTPS URL.
+`cloudflared tunnel --url http://localhost:8000` provides one.
+
+### How OAuth works here
+
+1. The merchant types their store handle. We validate it and build an authorize URL pointing at
+   **their own admin**, carrying our client id, the scopes we want, our redirect URL, and a `state`.
+2. They approve. Shopify redirects back to our callback with `code`, `hmac`, `shop`, `state`.
+3. We verify everything (below), then POST the code to `https://{shop}/admin/oauth/access_token`
+   with our client secret and receive a token for **that store**.
+
+### The callback is unauthenticated, so everything it trusts is proven
+
+The browser returning from Shopify may carry no session cookie, so the callback cannot be behind
+auth. Three checks replace it, and the **order matters**:
+
+- **The shop domain**, validated against `^[a-z0-9][a-z0-9-]*\.myshopify\.com$` — anchored at both
+  ends. This runs first because the domain is used to build the URL we redirect to *and* the URL we
+  post our client secret to. `store.myshopify.com.attacker.example` passes a naive "contains
+  myshopify.com" check and would send our secret to the attacker.
+- **The HMAC**, computed over every query parameter except `hmac` itself, sorted and joined, keyed
+  with the client secret, compared with `hmac.compare_digest` so a wrong digest cannot be discovered
+  byte by byte.
+- **The state**, a short-lived JWT carrying the workspace that started the install. Signed rather
+  than stored in a table — it already has to survive a round trip through Shopify, and a signature
+  carries the workspace without a lookup. This is what stops a CSRF-driven install landing in
+  someone else's workspace.
+
+### Storing the token
+
+Unlike a password, the token must be **recoverable** — we send it to Shopify on every request — so
+hashing is not an option. AES-256-GCM with a key derived per workspace from one master secret
+(`crypto.py`). One leaked key exposes one workspace. The tenant id is authenticated alongside the
+ciphertext, so a token row copied into another workspace fails to decrypt. `shopify_stores` is also
+row-level-security protected like every other tenant-scoped table.
+
+### The Admin API client
+
+Two things make Shopify awkward, both handled in `clients/shopify.py`:
+
+- **Rate limits** are a leaky bucket — 40 burst, refilling 2/second — and Shopify reports how full it
+  is in `X-Shopify-Shop-Api-Call-Limit`. Rather than sprinting into a 429 and backing off, the client
+  *slows down as the bucket fills*, so a bulk import runs at a steady pace instead of bursts
+  punctuated by failures. A real 429 is still honoured via `Retry-After`.
+- **Pagination is cursor-based** through an opaque `Link` header, not page numbers. `paginate()`
+  follows it so callers write an ordinary loop. Note the cursor URL carries its own query string, so
+  follow-up requests must not re-send the original params — doing so returns the first page forever.
+
+### A routing mistake worth recording
+
+The endpoints were first written as `/shopify/status` and `/shopify/install`, but the workspace
+dependency resolves `workspace_id` from the **path** — so every request failed with
+`Field required: path.workspace_id`. Split into two routers: the authenticated work lives under
+`/workspaces/{workspace_id}/shopify/...` alongside members and invitations, and only the callback
+stays at `/shopify/callback`, because the merchant returning from Shopify has no workspace in hand.
+
+### Also fixed
+
+Alembic autogenerate emits `postgresql.JSONB` / `postgresql.ENUM` without importing the dialect,
+which fails at runtime rather than at review time — it had bitten three migrations. The import is now
+in `alembic/script.py.mako`, so every generated migration has it, with ruff's unused-import rule
+waived for that directory.
+
+### Verified
+
+25 OAuth tests covering domain normalisation, five hostile domain shapes, HMAC tampering (edited,
+added and missing parameters), state forgery and uniqueness. 5 new end-to-end checks in `make verify`.
+Not yet done in M3: the bulk import and the 15-minute incremental sync.
+
 ## Known environment problems
 
 - **Disk pressure.** The Mac ran down to 1.2 GB free of 228 GB, which forced Docker's filesystem

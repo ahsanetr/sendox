@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     # HTTP
     cors_origins: str = "http://localhost:3000"
     web_base_url: str = "http://localhost:3000"
+    api_base_url: str = "http://localhost:8000"
 
     # Auth. The default is long enough to satisfy HS256's 32-byte minimum and
     # obviously unusable in production, where `_reject_weak_secrets` refuses it.
@@ -79,6 +80,16 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_use_tls: bool = False
     mail_from: str = "Sendox <no-reply@sendox.local>"
+
+    # Shopify (phase 1.2)
+    shopify_api_key: str | None = None
+    shopify_api_secret: str | None = None
+    shopify_scopes: str = "read_customers,read_orders,read_products"
+    shopify_api_version: str = "2026-10"
+    # Public HTTPS origin Shopify redirects back to. Must match a redirect URL
+    # registered on the app, and cannot be localhost.
+    public_base_url: str | None = None
+    shopify_dev_store: str | None = None
 
     # AI (wired up in phase 0.5)
     anthropic_api_key: str | None = None
@@ -119,6 +130,24 @@ class Settings(BaseSettings):
                 "Generate one with: openssl rand -base64 48"
             )
         return self
+
+    @property
+    def shopify_configured(self) -> bool:
+        return bool(self.shopify_api_key and self.shopify_api_secret)
+
+    @property
+    def shopify_scope_list(self) -> list[str]:
+        return [scope.strip() for scope in self.shopify_scopes.split(",") if scope.strip()]
+
+    @property
+    def oauth_redirect_uri(self) -> str:
+        """Where Shopify sends the merchant back after they approve.
+
+        Falls back to the local API so the app still boots without a tunnel; the
+        OAuth flow itself refuses to start without a public URL.
+        """
+        base = (self.public_base_url or self.api_base_url).rstrip("/")
+        return f"{base}/shopify/callback"
 
     @property
     def cors_origin_list(self) -> list[str]:

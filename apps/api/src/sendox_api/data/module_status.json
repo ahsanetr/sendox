@@ -92,7 +92,8 @@
       "name": "Shopify Connection & Data Synchronization",
       "release": "R1",
       "phase": "1.2",
-      "status": "planned"
+      "status": "partial",
+      "note": "OAuth install flow, encrypted per-store tokens, Admin API client with leaky-bucket throttling and cursor pagination. Bulk import and incremental sync not started"
     },
     {
       "id": "M4",

@@ -340,3 +340,43 @@ export const previewInvitation = (token: string) =>
   );
 
 export const getAudit = (id: string) => request<AuditEntry[]>(`/workspaces/${id}/audit`);
+
+
+// -------------------------------------------------------------------- Shopify
+
+export type ShopifyStore = {
+  id: string;
+  shop_domain: string;
+  shop_name: string | null;
+  currency: string | null;
+  scopes: string[];
+  connected: boolean;
+  installed_at: string | null;
+  last_sync_at: string | null;
+};
+
+export type ShopifyStatus = {
+  configured: boolean;
+  public_url_set: boolean;
+  ready: boolean;
+  redirect_uri: string;
+  scopes: string[];
+  api_version: string;
+  stores: ShopifyStore[];
+  hint: string | null;
+};
+
+export const getShopifyStatus = (workspaceId: string) =>
+  request<ShopifyStatus>(`/workspaces/${workspaceId}/shopify/status`);
+
+export const beginShopifyInstall = (workspaceId: string, shop: string) =>
+  request<{ authorize_url: string; shop_domain: string }>(
+    `/workspaces/${workspaceId}/shopify/install`,
+    { method: "POST", body: JSON.stringify({ shop }) },
+  );
+
+export const disconnectShopifyStore = (workspaceId: string, storeId: string) =>
+  request<{ status: string; shop_domain: string }>(
+    `/workspaces/${workspaceId}/shopify/stores/${storeId}`,
+    { method: "DELETE" },
+  );

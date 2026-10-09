@@ -297,15 +297,66 @@ if [ -n "$OWNER_TOKEN" ]; then
     && ok "workspace activity is recorded" "$entries entries" \
     || bad "workspace activity is recorded" "only ${entries:-0} entries"
 
-  # Leave the database as it was found.
-  curl -sS --max-time 15 -X DELETE "$API/auth/me" -H "Authorization: Bearer $GUEST_TOKEN" >/dev/null 2>&1
-  curl -sS --max-time 15 -X DELETE "$API/auth/me" -H "$auth" >/dev/null 2>&1
-  code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "$API/auth/me" -H "$auth" 2>/dev/null)
-  [ "$code" = "401" ] \
-    && ok "a deleted account can no longer be used" \
-    || bad "a deleted account can no longer be used" "got HTTP $code"
 fi
 rm -f "$JAR"
+
+# ------------------------------------------------------------ Shopify connect
+section "Shopify connect (M3)"
+
+if [ -n "${OWNER_TOKEN:-}" ] && [ -n "${WS:-}" ]; then
+  auth="Authorization: Bearer $OWNER_TOKEN"
+
+  if curl -fsS --max-time 10 "$API/workspaces/$WS/shopify/status" -H "$auth" \
+       -o /tmp/sendox-shopify.json 2>/dev/null; then
+    configured=$(jsonq 'd["configured"]' < /tmp/sendox-shopify.json)
+    ready=$(jsonq 'd["ready"]' < /tmp/sendox-shopify.json)
+    redirect=$(jsonq 'd["redirect"] if "redirect" in d else d["redirect_uri"]' < /tmp/sendox-shopify.json)
+
+    [ "$configured" = "True" ] \
+      && ok "app credentials present" \
+      || skipped "app credentials present" "SHOPIFY_API_KEY/SECRET not set"
+
+    if [ "$ready" = "True" ]; then
+      ok "connect flow ready" "$redirect"
+
+      # The authorize URL must point at the merchant's own admin, carry our
+      # client id, and request exactly the scopes we declare.
+      if curl -fsS --max-time 10 -X POST "$API/workspaces/$WS/shopify/install" -H "$auth" \
+           -H 'content-type: application/json' -d '{"shop":"verify-store"}' \
+           -o /tmp/sendox-install.json 2>/dev/null; then
+        host=$(jsonq 'd["authorize_url"].split("/")[2]' < /tmp/sendox-install.json)
+        [ "$host" = "verify-store.myshopify.com" ] \
+          && ok "authorize URL targets the merchant's admin" "$host" \
+          || bad "authorize URL targets the merchant's admin" "got $host"
+      else
+        bad "begin install"
+      fi
+
+      # A domain that merely contains myshopify.com must not be accepted: it is
+      # used to build both the redirect and the URL we post the secret to.
+      code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' -X POST \
+        "$API/workspaces/$WS/shopify/install" -H "$auth" -H 'content-type: application/json' \
+        -d '{"shop":"store.myshopify.com.attacker.example"}' 2>/dev/null)
+      [ "$code" = "422" ] \
+        && ok "a lookalike store domain is refused" \
+        || bad "a lookalike store domain is refused" "got HTTP $code"
+    else
+      skipped "connect flow ready" "PUBLIC_BASE_URL not set (Shopify cannot reach localhost)"
+    fi
+  else
+    bad "Shopify status endpoint"
+  fi
+
+  # An unsigned callback must never result in a token being stored.
+  location=$(curl -sS --max-time 10 -o /dev/null -w '%{redirect_url}' \
+    "$API/shopify/callback?shop=verify-store.myshopify.com&code=forged&state=forged&hmac=deadbeef" 2>/dev/null)
+  case "$location" in
+    *shopify_error*) ok "a forged callback is rejected" ;;
+    *) bad "a forged callback is rejected" "redirected to $location" ;;
+  esac
+else
+  skipped "Shopify connect" "no authenticated workspace from the M1 section"
+fi
 
 # ------------------------------------------------- vector store (brand knowledge)
 section "Brand knowledge vector store"
@@ -374,6 +425,24 @@ if page=$(curl -fsS --max-time 15 "$WEB/" 2>/dev/null); then
     || bad "dashboard renders" "page served but content unexpected"
 else
   skipped "dashboard renders" "not running; start with make dev-web"
+fi
+
+# ------------------------------------------------------------------- cleanup
+# Runs last so the workspace-scoped sections above still had a live session.
+section "Cleanup"
+
+if [ -n "${OWNER_TOKEN:-}" ]; then
+  curl -sS --max-time 15 -X DELETE "$API/auth/me" \
+    -H "Authorization: Bearer ${GUEST_TOKEN:-none}" >/dev/null 2>&1
+  curl -sS --max-time 15 -X DELETE "$API/auth/me" \
+    -H "Authorization: Bearer $OWNER_TOKEN" >/dev/null 2>&1
+  code=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "$API/auth/me" \
+    -H "Authorization: Bearer $OWNER_TOKEN" 2>/dev/null)
+  [ "$code" = "401" ] \
+    && ok "test accounts removed and no longer usable" \
+    || bad "test accounts removed and no longer usable" "got HTTP $code"
+else
+  skipped "test account cleanup" "nothing was created"
 fi
 
 # --------------------------------------------------------------------- summary

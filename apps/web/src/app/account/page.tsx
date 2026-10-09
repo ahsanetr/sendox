@@ -1,4 +1,5 @@
 import { AuthPanel } from "@/components/auth-panel";
+import { ShopifyPanel } from "@/components/shopify-panel";
 import { WorkspacePanel } from "@/components/workspace-panel";
 
 export const metadata = {
@@ -26,6 +27,7 @@ export default function AccountPage() {
       <div className="space-y-5">
         <AuthPanel />
         <WorkspacePanel />
+        <ShopifyPanel />
       </div>
     </main>
   );
