@@ -22,7 +22,14 @@ def _mjml_up(settings: Settings) -> bool:
 def test_dev_routes_are_absent_in_production() -> None:
     # FastAPI 0.142 wraps included routers instead of flattening them into
     # `app.routes`, so the OpenAPI schema is the reliable view of mounted paths.
-    production = create_app(Settings(env="production", log_level="WARNING", jwt_secret="a" * 48))
+    production = create_app(
+        Settings(
+            env="production",
+            log_level="WARNING",
+            jwt_secret="a" * 48,
+            encryption_key="b" * 48,
+        )
+    )
     paths = production.openapi()["paths"]
 
     assert not any(path.startswith("/dev") for path in paths)

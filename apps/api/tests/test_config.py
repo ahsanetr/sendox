@@ -12,8 +12,8 @@ def test_cors_origins_parse_into_a_list() -> None:
 def test_is_production_only_for_production_values() -> None:
     # A real signing key is required for any production Settings to construct.
     strong = "x" * 48
-    assert Settings(env="production", jwt_secret=strong).is_production
-    assert Settings(env="PROD", jwt_secret=strong).is_production
+    assert Settings(env="production", jwt_secret=strong, encryption_key=strong).is_production
+    assert Settings(env="PROD", jwt_secret=strong, encryption_key=strong).is_production
     assert not Settings(env="development").is_production
 
 
@@ -27,14 +27,19 @@ def test_defaults_match_compose_stack() -> None:
 def test_production_refuses_the_development_signing_key() -> None:
     """A weak key would weaken every session token the platform issues."""
     with pytest.raises(ValidationError) as caught:
-        Settings(env="production", _env_file=None)
+        Settings(env="production", encryption_key="z" * 48, _env_file=None)
 
     assert "JWT_SECRET" in str(caught.value)
 
 
 def test_production_refuses_a_short_signing_key() -> None:
     with pytest.raises(ValidationError) as caught:
-        Settings(env="production", jwt_secret="too-short", _env_file=None)
+        Settings(
+            env="production",
+            jwt_secret="too-short",
+            encryption_key="y" * 48,
+            _env_file=None,
+        )
 
     assert "32 bytes" in str(caught.value)
 

@@ -217,7 +217,8 @@ def test_development_only_tokens_are_absent_in_production(settings: Settings) ->
         Settings(
             env="production",
             log_level="WARNING",
-            jwt_secret="a" * 48,  # production refuses the dev default
+            jwt_secret="a" * 48,  # production refuses the dev defaults
+            encryption_key="b" * 48,
         )
     )
     with TestClient(production) as production_client:

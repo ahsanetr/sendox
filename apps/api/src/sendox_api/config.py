@@ -64,6 +64,11 @@ class Settings(BaseSettings):
     # Auth. The default is long enough to satisfy HS256's 32-byte minimum and
     # obviously unusable in production, where `_reject_weak_secrets` refuses it.
     jwt_secret: str = "dev-only-insecure-secret-change-me-before-deploying"
+
+    # Master secret for credential encryption. Per-tenant keys are derived from
+    # it, so this is the only value to rotate — but rotating it makes every
+    # stored Shopify token unreadable, requiring a reconnect.
+    encryption_key: str = "dev-only-insecure-encryption-key-change-me-too"
     session_cookie_name: str = "sendox_session"
 
     # Mail. Defaults point at Mailpit in docker-compose; phase 1.10 swaps the host
@@ -97,6 +102,11 @@ class Settings(BaseSettings):
         if not self.is_production:
             return self
 
+        if self.encryption_key.startswith("dev-only"):
+            raise ValueError(
+                "ENCRYPTION_KEY is still the development default. "
+                "Generate one with: openssl rand -base64 48"
+            )
         if self.jwt_secret.startswith("dev-only"):
             raise ValueError(
                 "JWT_SECRET is still the development default. "
