@@ -155,9 +155,23 @@ total_count = len(counted)
 summary = re.search(r"(\d+) passed, (\d+) failed, (\d+) skipped", verify_raw)
 checks_passed = summary.group(1) if summary else "?"
 checks_skipped = summary.group(3) if summary else "0"
+checks_failed = summary.group(2) if summary else "0"
 checks_total = (
-    str(int(checks_passed) + int(summary.group(2)) + int(checks_skipped)) if summary else "?"
+    str(int(checks_passed) + int(checks_failed) + int(checks_skipped)) if summary else "?"
 )
+
+# A headline that reports only passes would hide a failure, which is the one thing
+# this page exists not to do.
+if checks_failed != "0":
+    checks_caption = (
+        f"end-to-end checks against live services, run by one command — "
+        f"{checks_failed} failing, {checks_skipped} skipped"
+    )
+else:
+    checks_caption = (
+        f"end-to-end checks against live services, run by one command; "
+        f"{checks_skipped} skipped for optional dependencies"
+    )
 
 commit_rows = "\n".join(
     f'<li><span class="sha">{html.escape(sha)}</span>'
@@ -447,7 +461,7 @@ HTML = f"""<title>Sendox Build Status</title>
     </div>
     <div class="fig">
       <span class="n">{checks_passed}<span style="color:var(--faint)">/{checks_total}</span></span>
-      <span class="l">end-to-end checks against live services, run by one command; {checks_skipped} skipped for optional dependencies</span>
+      <span class="l">{checks_caption}</span>
     </div>
   </div>
 

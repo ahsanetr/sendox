@@ -6,8 +6,8 @@ from pathlib import Path
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# src/sendox_api/config.py -> apps/api -> apps -> repo root
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+# config.py -> sendox_api -> src -> apps/api -> apps -> repo root
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 
 # RFC 7518 section 3.2: an HS256 key must be at least as long as the hash output.
 MIN_JWT_SECRET_BYTES = 32
@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     # AI (wired up in phase 0.5)
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-5"
+    # Only needed for an API key that is not scoped to a workspace
+    # (sk-ant-usr-...). Console-issued keys carry their own workspace.
+    anthropic_workspace_id: str | None = None
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # Observability

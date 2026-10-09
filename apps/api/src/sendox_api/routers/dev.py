@@ -242,7 +242,7 @@ async def ai_ping(settings: SettingsDep) -> dict[str, Any]:
             settings,
             "Reply with exactly the word: ready",
             system="You are a terse health check. Answer in one word.",
-            max_tokens=16,
+            max_tokens=1024,
         )
     except claude.ClaudeNotConfigured as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc

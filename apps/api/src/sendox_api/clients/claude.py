@@ -14,6 +14,10 @@ from sendox_api.config import Settings
 
 REQUEST_TIMEOUT_SECONDS = 60.0
 
+# Thinking tokens count against max_tokens, so a tight ceiling truncates the
+# answer rather than merely shortening it.
+DEFAULT_MAX_TOKENS = 16000
+
 
 class ClaudeNotConfigured(RuntimeError):
     """No API key is set, so no generation can be attempted."""
@@ -48,9 +52,14 @@ async def complete(
     prompt: str,
     *,
     system: str | None = None,
-    max_tokens: int = 1024,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> Completion:
-    """One-shot completion. Agents build the prompt; this just sends it."""
+    """One-shot completion. Agents build the prompt; this just sends it.
+
+    `max_tokens` is deliberately generous. Thinking tokens count against it, so a
+    small ceiling can be consumed entirely by reasoning and return empty text —
+    the failure looks like the model ignoring you.
+    """
     client = _client(settings)
     try:
         message = await client.messages.create(

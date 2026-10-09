@@ -42,3 +42,18 @@ def test_production_refuses_a_short_signing_key() -> None:
 def test_development_tolerates_the_default_key() -> None:
     """Local development must not need a generated secret to boot."""
     assert Settings(env="development", _env_file=None).jwt_secret.startswith("dev-only")
+
+
+def test_the_repo_root_env_file_is_actually_found() -> None:
+    """The .env path was once off by one and pointed at apps/, silently.
+
+    Nothing failed loudly: Docker passes environment variables directly, so the
+    file was never needed there, and an unset ANTHROPIC_API_KEY just looks like
+    "not configured yet". This pins the location.
+    """
+    from sendox_api.config import _REPO_ROOT
+
+    assert (_REPO_ROOT / ".env.example").is_file(), (
+        f"_REPO_ROOT resolved to {_REPO_ROOT}, which is not the repository root"
+    )
+    assert (_REPO_ROOT / "docker-compose.yml").is_file()

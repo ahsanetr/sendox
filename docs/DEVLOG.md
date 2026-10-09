@@ -365,13 +365,39 @@ in M1 is done.
 
 ---
 
+## Anthropic key setup · 9 Oct 2026
+
+The first key supplied was an **unscoped user key** (`sk-ant-usr-…`). The API rejected every call:
+
+> This API key is not scoped to a workspace, so this request must include the
+> `anthropic-workspace-id` header.
+
+Two ways forward, both now supported: create a **workspace-scoped key** in the Console (`sk-ant-api03-…`,
+which carries its own workspace and needs nothing else), or set `ANTHROPIC_WORKSPACE_ID` alongside the
+user key — `clients/claude.py` sends it as a default header when present.
+
+Two related fixes while reading the current API guidance:
+
+- **`max_tokens` was far too small.** The health-check call used `max_tokens=16`. On current models
+  thinking is on by default and **thinking tokens count against `max_tokens`**, so a tight ceiling gets
+  consumed by reasoning and returns empty text — a failure that looks like the model ignoring you. The
+  client default is now 16,000.
+- A latent bug surfaced here: `config.py` resolved the repo root with `parents[3]`, which is `apps/`,
+  not the repository root — so **`.env` was never being read**. Nothing failed loudly because Docker
+  passes environment variables directly and an unset API key just looks like "not configured yet".
+  Fixed to `parents[4]`, with a test asserting `.env.example` and `docker-compose.yml` sit beside it.
+
+**The model stays `claude-sonnet-5`**, matching the scope document's choice of a Sonnet-tier model.
+Opus is roughly 2.5× the price; Sonnet is the right default for generating marketing copy at volume.
+
 ## Known environment problems
 
-- **The Mac's disk is full** (1.2 GB free of 228 GB). This forced Docker's filesystem read-only
-  mid-build. ~8.7 GB was reclaimed inside Docker but `Docker.raw` does not shrink, so the host is
-  still nearly full. **This needs attention or Docker builds will keep failing.**
-- Development therefore currently runs on the **native path** (`make up-native`): Homebrew Postgres
-  15 and Redis, with ChromaDB and the MJML sidecar as host processes. Mailpit is Docker-only, which is
-  why the API returns verification tokens directly in development.
+- **Disk pressure.** The Mac ran down to 1.2 GB free of 228 GB, which forced Docker's filesystem
+  read-only mid-build. ~8.7 GB was reclaimed inside Docker (`Docker.raw` does not shrink, so that did
+  not return to the host). Space has since been freed — **23 GB free as of 9 Oct**, enough for Docker
+  builds again.
+- Development currently runs on the **native path** (`make up-native`): Homebrew Postgres 15 and
+  Redis, with ChromaDB and the MJML sidecar as host processes. Mailpit is Docker-only, which is why
+  the API returns verification tokens directly in development.
 - `.github/workflows/ci.yml` exists and works locally but is **not on GitHub** — the `gh` token lacks
   the `workflow` scope. Run `gh auth refresh -h github.com -s workflow` to fix.
