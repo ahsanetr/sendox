@@ -390,6 +390,59 @@ Two related fixes while reading the current API guidance:
 **The model stays `claude-sonnet-5`**, matching the scope document's choice of a Sonnet-tier model.
 Opus is roughly 2.5× the price; Sonnet is the right default for generating marketing copy at volume.
 
+## First CI run — three failures, all real · 9 Oct 2026
+
+The GitHub token finally had the `workflow` scope, so `ci.yml` could be pushed and ran for the first
+time. All four jobs failed, and every failure was a genuine defect rather than CI noise. This is the
+argument for CI in one run: each of these passed locally.
+
+**1. The container could not start at all — caused by the previous fix.** Resolving the repository
+root as `Path(__file__).parents[4]` is correct inside the repository
+(`apps/api/src/sendox_api/config.py`) but the container image flattens the tree to
+`/app/src/sendox_api/config.py`, where there is no fourth parent:
+
+```
+File "/app/src/sendox_api/config.py", line 10
+  _REPO_ROOT = Path(__file__).resolve().parents[4]
+IndexError: 4
+```
+
+Counting parents encodes an assumption about directory depth that differs per environment. Replaced
+with an upward search for a marker file (`docker-compose.yml`, chosen because it is committed, unlike
+`.env`), falling back harmlessly when no repository is present — which is exactly the container's
+situation, where configuration comes from the environment anyway.
+
+**2. The API job never ran migrations**, so 32 tests failed with `role "sendox_app" does not exist`.
+Obvious in hindsight: the test database is created fresh by the GitHub service container, and the
+schema *and* that non-superuser role both come from a migration. Added an `alembic upgrade head` step
+before the test step.
+
+**3. `pnpm install --frozen-lockfile` failed both Node jobs** with
+`ERR_PNPM_IGNORED_BUILDS: unrs-resolver`. The fix locally had been `pnpm rebuild`, which papered over
+the real cause: pnpm 11 gates dependency install scripts on an `allowBuilds` block in
+`pnpm-workspace.yaml`, and it had written a **placeholder** there —
+`unrs-resolver: set this to true or false` — which is not a boolean, so the package stayed unapproved.
+The `onlyBuiltDependencies` list that was also present is read by `pnpm config` but is not the gate.
+`pnpm approve-builds --all` writes the correct block. Verified by deleting every `node_modules` and
+installing from scratch, which is what CI does every run.
+
+The lesson worth keeping: **"it works on my machine" was true in all three cases.** A local
+environment accumulates state — an already-migrated database, an already-rebuilt native module, a
+source tree that happens to be the right depth — and CI has none of it.
+
+## Anthropic API, working · 9 Oct 2026
+
+Three attempts to get a usable key, each failing differently and each worth knowing:
+
+1. **Unscoped key** — `This API key is not scoped to a workspace`. The `sk-ant-usr-` prefix does *not*
+   determine this; a user key can be scoped to a workspace in the Console, and the third key was.
+2. **Scoped, but no credits** — `Your credit balance is too low to access the Anthropic API`. A
+   different 400, and a useful reminder that a working key is not a working account.
+3. **Working.** `/dev/ai/ping` returns 200, model `claude-sonnet-5`, 34 input / 4 output tokens.
+
+Every AI feature from here (M9 Strategy, M10 Copywriting, M12 Validation, M19 Optimization) runs
+through `clients/claude.py`, so this unblocks all of them.
+
 ## Known environment problems
 
 - **Disk pressure.** The Mac ran down to 1.2 GB free of 228 GB, which forced Docker's filesystem

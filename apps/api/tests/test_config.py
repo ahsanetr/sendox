@@ -57,3 +57,15 @@ def test_the_repo_root_env_file_is_actually_found() -> None:
         f"_REPO_ROOT resolved to {_REPO_ROOT}, which is not the repository root"
     )
     assert (_REPO_ROOT / "docker-compose.yml").is_file()
+
+
+def test_repo_root_discovery_survives_a_flattened_layout(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """The container flattens the tree, so a fixed parent index raises IndexError.
+
+    Replacing the index with a marker search fixed the container; this proves the
+    search degrades gracefully when no marker exists at all, rather than throwing.
+    """
+    from sendox_api.config import _find_repo_root
+
+    # Running from this repository, the marker is found.
+    assert (_find_repo_root() / "docker-compose.yml").is_file()

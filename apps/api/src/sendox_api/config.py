@@ -6,8 +6,29 @@ from pathlib import Path
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# config.py -> sendox_api -> src -> apps/api -> apps -> repo root
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+
+def _find_repo_root() -> Path:
+    """Locate the repository root by searching upward for a marker file.
+
+    Counting `.parents[N]` is fragile, because the layout differs by environment:
+    in the repository this file sits at `apps/api/src/sendox_api/config.py`, but
+    the container image flattens it to `/app/src/sendox_api/config.py`. An index
+    that is correct for one raises IndexError on the other — which is exactly how
+    the container's migrations broke once the index was "fixed" for the repo.
+
+    `docker-compose.yml` is the marker because it is committed, so a fresh clone
+    has it, unlike `.env`.
+    """
+    here = Path(__file__).resolve()
+    for candidate in here.parents:
+        if (candidate / "docker-compose.yml").is_file():
+            return candidate
+    # Container image: the repository is not present and configuration arrives
+    # through the environment, so point somewhere harmless that has no .env.
+    return here.parent
+
+
+_REPO_ROOT = _find_repo_root()
 
 # RFC 7518 section 3.2: an HS256 key must be at least as long as the hash output.
 MIN_JWT_SECRET_BYTES = 32

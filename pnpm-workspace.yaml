@@ -2,10 +2,10 @@ packages:
   - apps/web
   - services/*
 
+# Native binding for the ESLint import resolver. pnpm 11 refuses to run a
+# dependency's install scripts unless it is listed here, and treats an unapproved
+# one as an error — so without this, `pnpm install --frozen-lockfile` fails in CI.
+# `pnpm approve-builds --all` writes this block; the key is allowBuilds, not the
+# older onlyBuiltDependencies.
 allowBuilds:
-  unrs-resolver: set this to true or false
-
-# Native binding for the ESLint import resolver. Explicitly approved so installs
-# are non-interactive in CI. (pnpm 11 reads settings here, not in package.json.)
-onlyBuiltDependencies:
-  - unrs-resolver
+  unrs-resolver: true

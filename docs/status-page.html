@@ -274,12 +274,12 @@
       <span class="l">build items complete, plus 2 partial — across 6 foundation phases and 25 scope modules</span>
     </div>
     <div class="fig">
-      <span class="n">72</span>
+      <span class="n">73</span>
       <span class="l">automated tests passing, including 7 that prove workspace data cannot leak</span>
     </div>
     <div class="fig">
-      <span class="n">32<span style="color:var(--faint)">/34</span></span>
-      <span class="l">end-to-end checks against live services, run by one command — 1 failing, 1 skipped</span>
+      <span class="n">33<span style="color:var(--faint)">/34</span></span>
+      <span class="l">end-to-end checks against live services, run by one command; 1 skipped for optional dependencies</span>
     </div>
   </div>
 
@@ -297,9 +297,9 @@
 <span class="v ok">PASS</span><span class="vl">root endpoint identifies the service</span><span class="vd">v0.1.0</span>
 <span class="v ok">PASS</span><span class="vl">liveness probe</span><span class="vd"></span>
 <span class="v ok">PASS</span><span class="vl">readiness: all backing services ok</span><span class="vd"></span>
-<span class="v ok">PASS</span><span class="vl">  └ postgres                               1</span><span class="vd">6.1 ms</span>
-<span class="v ok">PASS</span><span class="vl">  └ redis                                  1</span><span class="vd">2.5 ms</span>
-<span class="v ok">PASS</span><span class="vl">  └ chromadb                               9</span><span class="vd">.2 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ postgres                               1</span><span class="vd">4.9 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ redis                                  1</span><span class="vd">1.4 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ chromadb                               1</span><span class="vd">0.2 ms</span>
 <span class="v ok">PASS</span><span class="vl">  └ mjml                                   6</span><span class="vd">.0 ms</span>
 
 <span class="vgroup">Build status</span>
@@ -312,7 +312,7 @@
 <span class="v ok">PASS</span><span class="vl">tenant isolation enforced</span><span class="vd"></span>
 
 <span class="vgroup">Queue (Redis + Celery worker)</span>
-<span class="v ok">PASS</span><span class="vl">task enqueued and executed by a worker</span><span class="vd">2586bc7e…</span>
+<span class="v ok">PASS</span><span class="vl">task enqueued and executed by a worker</span><span class="vd">171ed972…</span>
 
 <span class="vgroup">MJML renderer</span>
 <span class="v ok">PASS</span><span class="vl">sidecar health endpoint</span><span class="vd"></span>
@@ -338,7 +338,7 @@
 <span class="v ok">PASS</span><span class="vl">semantic search retrieves by meaning</span><span class="vd">top hit &#x27;shipping&#x27; @ 0.6005</span>
 
 <span class="vgroup">Claude API</span>
-<span class="v bad">FAIL</span><span class="vl">Claude round-trip</span><span class="vd">key present but the call failed</span>
+<span class="v ok">PASS</span><span class="vl">Claude round-trip</span><span class="vd">claude-sonnet-5</span>
 
 <span class="vgroup">Services reachable directly</span>
 <span class="v ok">PASS</span><span class="vl">ChromaDB heartbeat (v2 API)</span><span class="vd"></span>
@@ -347,8 +347,8 @@
 <span class="vgroup">Web dashboard</span>
 <span class="v ok">PASS</span><span class="vl">dashboard renders</span><span class="vd">http://localhost:3000</span>
 
-<span class="vsum">Summary  32 passed, 1 failed, 1 skipped</span>
-<span class="vgroup">Some checks failed.</span></pre>
+<span class="vsum">Summary  33 passed, 0 failed, 1 skipped</span>
+<span class="v ok" style="padding:0">All required checks passed.</span></pre>
     </div>
   </section>
 
@@ -453,7 +453,9 @@
 
   <section class="blk">
     <h2>History</h2>
-    <ul class="commits"><li><span class="sha">60bbb73</span><span class="csub">Phase 0.3 + 1.1 (M1): accounts, workspaces, roles and invitations</span><span class="cdate">2026-10-09</span></li>
+    <ul class="commits"><li><span class="sha">bec6ddd</span><span class="csub">Add CI workflow</span><span class="cdate">2026-10-09</span></li>
+<li><span class="sha">ed3805a</span><span class="csub">Anthropic client: workspace-scoped keys, sane max_tokens, and a real .env fix</span><span class="cdate">2026-10-09</span></li>
+<li><span class="sha">60bbb73</span><span class="csub">Phase 0.3 + 1.1 (M1): accounts, workspaces, roles and invitations</span><span class="cdate">2026-10-09</span></li>
 <li><span class="sha">62ed9ab</span><span class="csub">Phase 0.5: brand knowledge vector store and Claude client</span><span class="cdate">2026-10-08</span></li>
 <li><span class="sha">14216ae</span><span class="csub">Phase 0.2: schema, migrations, and Postgres-enforced tenant isolation</span><span class="cdate">2026-10-08</span></li>
 <li><span class="sha">6241bc2</span><span class="csub">Phase 0.1 + 0.4: monorepo skeleton, compose stack, CI, dev dashboard</span><span class="cdate">2026-10-08</span></li></ul>
