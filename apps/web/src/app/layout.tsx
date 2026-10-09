@@ -1,35 +1,40 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Archivo, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-import { SiteHeader } from "@/components/site-header";
+import { AppFrame } from "@/components/app/app-frame";
 import { SessionProvider } from "@/lib/session";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Archivo is a grotesque with real tabular figures and holds up at the small
+// sizes a data-dense product lives at — unlike the default UI sans everyone
+// reaches for. Plex Mono appears only where a value genuinely is data: store
+// domains, identifiers.
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
-  title: "Sendox — dev dashboard",
-  description: "Live status and controls for the Sendox platform build",
+  title: "Sendox",
+  description: "AI-native marketing for Shopify brands",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${archivo.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <SessionProvider>
-          <SiteHeader />
-          {children}
+          <AppFrame>{children}</AppFrame>
         </SessionProvider>
       </body>
     </html>

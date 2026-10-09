@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { getAiStatus, pingAi, type AiPing } from "@/lib/api";
 import { usePolledResource } from "@/lib/use-polled-resource";
-import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote } from "@/components/dev-ui";
 
 export function AiStatus() {
   const { data, error } = usePolledResource(getAiStatus);

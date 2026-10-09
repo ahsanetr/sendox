@@ -69,6 +69,13 @@
       "release": "R0",
       "status": "planned",
       "note": "Blocks R1 sending and R3 channels. Not a coding task"
+    },
+    {
+      "id": "1.3",
+      "name": "Product UI foundation \u2014 app shell and design system",
+      "release": "R1",
+      "status": "done",
+      "note": "Dark navigation rail, light canvas, warm neutrals with a cobalt accent, Archivo type. shadcn/ui initialised. Home leads with what needs approval rather than metrics. Dev dashboard moved to /dev"
     }
   ],
   "modules": [

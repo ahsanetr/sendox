@@ -26,7 +26,7 @@ import {
   Note,
   RoleBadge,
   inputClass,
-} from "@/components/ui";
+} from "@/components/dev-ui";
 
 const ASSIGNABLE: MemberRole[] = ["viewer", "editor", "admin", "owner"];
 

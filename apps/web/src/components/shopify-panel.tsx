@@ -12,9 +12,12 @@ import {
   type ShopifyStatus,
 } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { Badge, Button, Card, ErrorNote, Field, Note, inputClass } from "@/components/ui";
+import { EmptyState, Pill } from "@/components/app/primitives";
 
 const RANK = { viewer: 0, editor: 1, admin: 2, owner: 3 } as const;
+
+const ACTION =
+  "shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40";
 
 export function ShopifyPanel() {
   const { activeWorkspace, role } = useSession();
@@ -62,71 +65,64 @@ export function ShopifyPanel() {
 
   if (!activeWorkspace) {
     return (
-      <Card title="Shopify">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Select a workspace to connect a store.
-        </p>
-      </Card>
+      <EmptyState
+        headline="Select a workspace"
+        body="A store connects to one workspace. Choose one from the switcher above."
+      />
     );
   }
 
   const mayConnect = role !== null && RANK[role] >= RANK.admin;
   const stores = status?.stores ?? [];
-  const live = stores.filter((store) => store.connected);
 
   return (
-    <Card
-      title="Shopify"
-      subtitle="Phase 1.2 / M3 — the merchant installs the app and approves scopes, exactly as they would for Klaviyo"
-      action={<Badge status={live.length > 0 ? "done" : "planned"} />}
-    >
-      {error && <ErrorNote>{error}</ErrorNote>}
+    <div>
+      {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
       {outcome && (
         <div className="mb-3">
-          <Note>{outcome}</Note>
+          <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">{outcome}</p>
         </div>
       )}
 
       {status && !status.ready && (
         <div className="mb-3">
-          <ErrorNote>{status.hint}</ErrorNote>
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{status.hint}</p>
         </div>
       )}
 
       {status && (
         <dl className="mb-4 flex flex-col gap-1 text-xs">
           <div className="flex flex-wrap gap-x-2">
-            <dt className="w-28 shrink-0 text-zinc-500 dark:text-zinc-400">Redirect URL</dt>
+            <dt className="w-28 shrink-0 text-muted-foreground">Redirect URL</dt>
             <dd className="min-w-0 font-mono break-all">{status.redirect_uri}</dd>
           </div>
           <div className="flex flex-wrap gap-x-2">
-            <dt className="w-28 shrink-0 text-zinc-500 dark:text-zinc-400">Scopes</dt>
+            <dt className="w-28 shrink-0 text-muted-foreground">Scopes</dt>
             <dd className="min-w-0 font-mono break-all">{status.scopes.join(", ")}</dd>
           </div>
           <div className="flex flex-wrap gap-x-2">
-            <dt className="w-28 shrink-0 text-zinc-500 dark:text-zinc-400">API version</dt>
+            <dt className="w-28 shrink-0 text-muted-foreground">API version</dt>
             <dd className="font-mono">{status.api_version}</dd>
           </div>
         </dl>
       )}
 
       {stores.length > 0 && (
-        <ul className="mb-4 divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="mb-4 divide-y divide-border">
           {stores.map((store) => (
             <li key={store.id} className="flex flex-wrap items-center gap-2 py-2">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
                   {store.shop_name ?? store.shop_domain}
                 </span>
-                <span className="block truncate font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="block truncate font-mono text-xs text-muted-foreground">
                   {store.shop_domain}
                   {store.currency ? ` · ${store.currency}` : ""}
                 </span>
               </span>
-              <Badge status={store.connected ? "done" : "planned"} />
+              <Pill tone={store.connected ? "positive" : "neutral"}>{store.connected ? "Connected" : "Disconnected"}</Pill>
               {store.connected && (
-                <Button
-                  onClick={() =>
+                <button type="button" onClick={() =>
                     void (async () => {
                       setBusy(`sync-${store.id}`);
                       setError(null);
@@ -143,15 +139,12 @@ export function ShopifyPanel() {
                         setBusy(null);
                       }
                     })()
-                  }
-                  disabled={busy !== null}
-                >
+                  } disabled={busy !== null} className={ACTION}>
                   {busy === `sync-${store.id}` ? "Queuing…" : "Import data"}
-                </Button>
+                </button>
               )}
               {mayConnect && store.connected && (
-                <Button
-                  onClick={() =>
+                <button type="button" onClick={() =>
                     void (async () => {
                       setBusy(store.id);
                       try {
@@ -163,11 +156,9 @@ export function ShopifyPanel() {
                         setBusy(null);
                       }
                     })()
-                  }
-                  disabled={busy !== null}
-                >
+                  } disabled={busy !== null} className={ACTION}>
                   Disconnect
-                </Button>
+                </button>
               )}
             </li>
           ))}
@@ -182,37 +173,31 @@ export function ShopifyPanel() {
         }}
       >
         <div className="min-w-48 flex-1">
-          <Field
-            label="Store domain"
-            hint="Just the handle is enough — northwind becomes northwind.myshopify.com"
-          >
+          <label className="flex flex-col gap-1.5"><span className="text-sm font-medium">Store domain</span><span className="order-last text-xs text-muted-foreground">Just the handle is enough — northwind becomes northwind.myshopify.com</span>
             <input
               id="shopify-shop"
               value={shop}
               onChange={(event) => setShop(event.target.value)}
-              className={inputClass}
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
               placeholder="your-store.myshopify.com"
               disabled={!mayConnect || !status?.ready}
             />
-          </Field>
+          </label>
         </div>
-        <Button
-          onClick={() => void connect()}
-          disabled={busy !== null || !mayConnect || !status?.ready || shop.trim().length < 3}
-        >
+        <button type="button" onClick={() => void connect()} disabled={busy !== null || !mayConnect || !status?.ready || shop.trim().length < 3} className={ACTION}>
           {busy === "install" ? "Redirecting…" : "Connect store"}
-        </Button>
+        </button>
       </form>
 
       {!mayConnect && (
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-xs text-muted-foreground">
           Connecting a store requires the admin role; you are {role}.
         </p>
       )}
 
       {data && data.counts.contacts + data.counts.products > 0 && (
         <div className="mt-5 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Imported from Shopify
           </h3>
           <dl className="mt-2 grid grid-cols-3 gap-4">
@@ -223,13 +208,13 @@ export function ShopifyPanel() {
             ].map(([label, value]) => (
               <div key={String(label)}>
                 <dd className="font-mono text-xl tabular-nums">{String(value)}</dd>
-                <dt className="text-xs text-zinc-500 dark:text-zinc-400">{String(label)}</dt>
+                <dt className="text-xs text-muted-foreground">{String(label)}</dt>
               </div>
             ))}
           </dl>
 
           {data.top_contacts.length > 0 && (
-            <ul className="mt-3 divide-y divide-zinc-200 dark:divide-zinc-800">
+            <ul className="mt-3 divide-y divide-border">
               {data.top_contacts.map((contact) => (
                 <li
                   key={contact.email}
@@ -238,13 +223,11 @@ export function ShopifyPanel() {
                   <span className="min-w-0 flex-1 truncate">
                     {contact.name ?? contact.email}
                   </span>
-                  <span className="font-mono text-zinc-500 dark:text-zinc-400">
+                  <span className="font-mono text-muted-foreground">
                     {contact.orders} orders
                   </span>
                   <span className="font-mono tabular-nums">{contact.spent.toFixed(2)}</span>
-                  <Badge
-                    status={contact.consent === "subscribed" ? "done" : "planned"}
-                  />
+                  <Pill tone={contact.consent === "subscribed" ? "positive" : "neutral"}>{contact.consent}</Pill>
                 </li>
               ))}
             </ul>
@@ -252,11 +235,11 @@ export function ShopifyPanel() {
         </div>
       )}
 
-      <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mt-3 text-xs text-muted-foreground">
         You will be sent to your Shopify admin to approve the scopes above, then
         returned here. The access token is encrypted per workspace before it is stored.
       </p>
-    </Card>
+    </div>
   );
 
   async function connect() {

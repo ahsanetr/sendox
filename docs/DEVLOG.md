@@ -569,6 +569,54 @@ testable with no network, no credentials, and no dependence on one store's conte
 
 Still to do in M3: the 15-minute incremental sync (FE-5) and the webhook pipeline (M4).
 
+## Phase 1.3b — product UI foundation · 9 Oct 2026
+
+**Goal:** stop building features into a developer dashboard.
+
+Inserted at Ahsan's request after he pointed out the UI looked temporary. He was right: what existed
+was a diagnostic tool — one column of panels named after build phases — and it was never the product.
+The timing argument is simple: M6, M9, M10, M13 and M14 each bring several real screens. Built into
+throwaway panels, every one gets rebuilt.
+
+### The design decision that shaped it
+
+Klaviyo is a tool you *operate*. Sendox is meant to *propose work and ask for your judgement*. So the
+home page leads with **"Waiting on you"** rather than four KPI tiles — the metrics sit below, as a
+plain row of figures rather than boxed cards. The user is a merchant owner, not a marketing
+specialist; they check in a few times a week to approve and to see whether it made money.
+
+### The system
+
+- **Colour**: warm neutrals rather than the usual cool slate — the rail is `#1c1a17`, a warm
+  near-black, and the canvas `#fbfaf7`. A product about a brand's own voice suits warmth better than
+  a blue-grey chassis. The accent is a cool cobalt `#2e4ad9`: the contrast between warm ground and
+  cool action reads clearly without a neon. Semantic green, amber and rose sit far from cobalt, so
+  "needs attention" never looks like "this is a button".
+- **Type**: **Archivo** throughout — a grotesque with real tabular figures that holds up at the small
+  sizes a data-dense product lives at. IBM Plex Mono appears only where a value genuinely is data:
+  store domains, identifiers. Not on every small label.
+- **Layout**: fixed 240px dark rail carrying the workspace switcher (the most consequential state in
+  the app — everything is scoped to it, so it is not buried in a menu), a page header per screen, and
+  tables as the primary surface.
+
+Three rules that kept it disciplined: tables, not cards, unless something genuinely is a separate
+object; the accent is only ever action or active state, never decoration; and an empty screen always
+carries the action that fills it.
+
+### What moved
+
+`/` is now the merchant's home, with `/brand`, `/contacts`, `/settings` and placeholder
+`/campaigns`, `/flows`. The developer dashboard moved intact to **`/dev`**, and is deliberately
+reachable without signing in — it is how you check whether the platform is up, which matters most
+when it is not.
+
+Signed-out visitors get a two-panel sign-in screen rather than an empty shell. A navigation rail full
+of links you cannot use is worse than no rail.
+
+One naming collision to watch: shadcn installs into `src/components/ui/`, which collided with the
+existing `src/components/ui.tsx`. The old file became `dev-ui.tsx`, and the dev panels still use it —
+they keep their utilitarian look on purpose.
+
 ## Known environment problems
 
 - **Disk pressure.** The Mac ran down to 1.2 GB free of 228 GB, which forced Docker's filesystem

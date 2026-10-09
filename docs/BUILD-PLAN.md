@@ -142,6 +142,7 @@ Modules: M1, M3, M4 (partial), M5, M6, M7, M8, M10, M11, M12, M16, M17, M18 (par
 | 1.1 | **M1** Auth, workspaces, roles, team invites, audit log | 2 | two users, two workspaces, role enforced at API *and* UI |
 | 1.2 | **M3** Shopify OAuth + encrypted token store + bulk import (customers, orders, products) | 2 | dev store connected, 1k+ records imported, rate limits handled |
 | 1.3 | **M5** Contact + behavioral event schema, timeline, tags, CSV import | 1.5 | contact detail page shows a real purchase timeline |
+| 1.3b | ✅ **Product UI foundation** — app shell, design system, screens rebuilt | 1 | inserted on request: every later module lands in the real product rather than a dev panel |
 | 1.4 | **M6** Onboarding wizard (5 questions + assets) + sitemap crawler + product/About parser → S3 | 2.5 | run against dev store; extracted text and images inspectable |
 | 1.5 | **M7** Chunk → embed → Chroma with metadata + knowledge-base inspector UI | 1.5 | user can see what the AI "learned"; versioned |
 | 1.6 | **M8** RAG retrieval + prompt template library + assembly + token budget + prompt logging | 1.5 | every generation has a stored, inspectable prompt |

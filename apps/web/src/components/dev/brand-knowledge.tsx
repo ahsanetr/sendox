@@ -10,7 +10,7 @@ import {
   type VectorMatch,
 } from "@/lib/api";
 import { usePolledResource } from "@/lib/use-polled-resource";
-import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote } from "@/components/dev-ui";
 
 const EXAMPLE_QUERIES = [
   "can I send something back?",

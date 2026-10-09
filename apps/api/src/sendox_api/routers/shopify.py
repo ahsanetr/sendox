@@ -250,5 +250,5 @@ def _back_to_app(
     """Send the merchant's browser back to the dashboard with the outcome."""
     base = settings.web_base_url.rstrip("/")
     if error:
-        return RedirectResponse(f"{base}/account?shopify_error={quote(error)}", status_code=302)
-    return RedirectResponse(f"{base}/account?shopify_connected={connected}", status_code=302)
+        return RedirectResponse(f"{base}/brand?shopify_error={quote(error)}", status_code=302)
+    return RedirectResponse(f"{base}/brand?shopify_connected={connected}", status_code=302)

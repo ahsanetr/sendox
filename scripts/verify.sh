@@ -419,13 +419,20 @@ fi
 # ------------------------------------------------------------------------- web
 section "Web dashboard"
 
-if page=$(curl -fsS --max-time 15 "$WEB/" 2>/dev/null); then
-  printf '%s' "$page" | grep -q "Internal dev dashboard" \
-    && ok "dashboard renders" "$WEB" \
-    || bad "dashboard renders" "page served but content unexpected"
-else
-  skipped "dashboard renders" "not running; start with make dev-web"
-fi
+# The app shell renders client-side, so the served HTML carries the document and
+# the bundle rather than the panels. Checking for the app name plus the Next.js
+# payload is what can actually be asserted without driving a browser.
+for route in "/" "/brand" "/contacts" "/settings" "/dev"; do
+  if page=$(curl -fsS --max-time 25 "$WEB$route" 2>/dev/null); then
+    if printf '%s' "$page" | grep -q "Sendox" && printf '%s' "$page" | grep -q "__next"; then
+      ok "web route $route" ""
+    else
+      bad "web route $route" "served but the document looks wrong"
+    fi
+  else
+    skipped "web route $route" "not running; start with make dev-web"
+  fi
+done
 
 # ------------------------------------------------------------------- cleanup
 # Runs last so the workspace-scoped sections above still had a live session.

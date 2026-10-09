@@ -2,7 +2,7 @@
 
 import { API_BASE, getReadiness } from "@/lib/api";
 import { usePolledResource } from "@/lib/use-polled-resource";
-import { Button, Card, Dot, ErrorNote } from "@/components/ui";
+import { Button, Card, Dot, ErrorNote } from "@/components/dev-ui";
 
 const REFRESH_MS = 10_000;
 

@@ -8,7 +8,7 @@ import {
   renderSampleEmail,
   type RenderResult,
 } from "@/lib/api";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import { Button, Card, ErrorNote } from "@/components/dev-ui";
 
 const POLL_INTERVAL_MS = 400;
 const POLL_ATTEMPTS = 25;

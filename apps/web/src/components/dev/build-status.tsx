@@ -2,7 +2,7 @@
 
 import { getBuildStatus, type StatusItem } from "@/lib/api";
 import { usePolledResource } from "@/lib/use-polled-resource";
-import { Badge, Card, ErrorNote } from "@/components/ui";
+import { Badge, Card, ErrorNote } from "@/components/dev-ui";
 
 function ItemRow({ item }: { item: StatusItem }) {
   const dimmed = item.status === "planned";

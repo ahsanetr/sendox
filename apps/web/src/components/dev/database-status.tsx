@@ -2,7 +2,7 @@
 
 import { getDatabaseStatus } from "@/lib/api";
 import { usePolledResource } from "@/lib/use-polled-resource";
-import { Badge, Card, ErrorNote } from "@/components/ui";
+import { Badge, Card, ErrorNote } from "@/components/dev-ui";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { login, logout, register, verifyEmail } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { Button, Card, ErrorNote, Field, Note, inputClass } from "@/components/ui";
+import { Button, Card, ErrorNote, Field, Note, inputClass } from "@/components/dev-ui";
 
 type Mode = "login" | "register";
 
