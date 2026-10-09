@@ -161,6 +161,68 @@ async def callback(
     return _back_to_app(settings, connected=shop_domain)
 
 
+@router.post("/stores/{store_id}/sync", summary="Import this store's data")
+async def start_sync(store_id: str, workspace: Workspace, settings: SettingsDep) -> dict[str, Any]:
+    """Queue a full import.
+
+    Returns immediately with a task id: an import makes hundreds of rate-limited
+    calls and can take minutes, which is not something to hold a request open for.
+    """
+    try:
+        workspace.require(MemberRole.EDITOR)
+    except InsufficientRole as exc:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=f"syncing requires the {exc.required} role; you are {exc.actual}",
+        ) from exc
+
+    with tenant_session(settings, workspace.tenant_id, workspace.user_id) as session:
+        stores = shopify_stores.stores_for_tenant(session, workspace.tenant_id)
+        store = next((s for s in stores if str(s.id) == store_id and s.is_active), None)
+        if store is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="store not connected")
+        domain = store.shop_domain
+
+    from sendox_api.tasks import import_shopify_store
+
+    task = import_shopify_store.delay(str(workspace.tenant_id), store_id)
+    return {"status": "queued", "task_id": task.id, "shop_domain": domain}
+
+
+@router.get("/data", summary="What the import has brought in")
+async def imported_data(workspace: Workspace, settings: SettingsDep) -> dict[str, Any]:
+    """Counts plus a sample, so the dashboard can show the import actually landed."""
+    from sqlalchemy import func
+    from sqlalchemy import select as sa_select
+
+    from sendox_api.models import Contact, Event, Product
+
+    with tenant_session(settings, workspace.tenant_id, workspace.user_id) as session:
+        counts = {
+            "contacts": session.execute(sa_select(func.count()).select_from(Contact)).scalar_one(),
+            "events": session.execute(sa_select(func.count()).select_from(Event)).scalar_one(),
+            "products": session.execute(sa_select(func.count()).select_from(Product)).scalar_one(),
+        }
+        contacts = [
+            {
+                "email": c.email,
+                "name": c.full_name,
+                "consent": c.email_consent.value,
+                "orders": c.orders_count,
+                "spent": c.total_spent,
+            }
+            for c in session.execute(
+                sa_select(Contact).order_by(Contact.total_spent.desc()).limit(10)
+            ).scalars()
+        ]
+        products = [
+            {"title": p.title, "price": p.price, "status": p.status}
+            for p in session.execute(sa_select(Product).limit(10)).scalars()
+        ]
+
+    return {"counts": counts, "top_contacts": contacts, "products": products}
+
+
 @router.delete("/stores/{store_id}", summary="Disconnect a store")
 async def disconnect(store_id: str, workspace: Workspace, settings: SettingsDep) -> dict[str, str]:
     try:

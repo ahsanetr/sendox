@@ -530,7 +530,44 @@ waived for that directory.
 
 25 OAuth tests covering domain normalisation, five hostile domain shapes, HMAC tampering (edited,
 added and missing parameters), state forgery and uniqueness. 5 new end-to-end checks in `make verify`.
-Not yet done in M3: the bulk import and the 15-minute incremental sync.
+
+### The data layer it feeds (M5)
+
+Three tenant-scoped tables, all with the same FORCE'd row-level security policy — a brand's customer
+list is the most sensitive thing this platform will ever hold:
+
+- **`contacts`** — identity, per-channel consent, and denormalised order totals. Consent is tracked
+  **per channel** because the law treats email and SMS separately, and it defaults to `unknown`
+  rather than `subscribed`: emailing people who never opted in is precisely how a sending domain's
+  reputation is destroyed. Order counts are denormalised so segmentation and the predictive models in
+  M20 do not aggregate the event table on every query.
+- **`events`** — one row per thing a contact did, with `occurred_at` and a JSONB payload. This is the
+  timeline the Copywriting Agent reads to personalise.
+- **`products`** — needed twice later: the Design Agent fills product blocks from it (M11 FE-4), and
+  the validation layer checks AI claims against it (M12 FE-1), which is what stops an invented
+  discount reaching a customer.
+
+### Import design: idempotent by construction
+
+A 40,000-record import **will** be interrupted, so re-running it must be free. Everything is
+upsert-by-external-id: contacts keyed on `(tenant, email)`, products on `(tenant, shopify_product_id)`,
+events on `(tenant, type, external_id)`. Running the import twice produces identical state, and a
+test asserts exactly that — second pass, zero new events.
+
+Shopify is treated as the **source of truth**: a re-sync overwrites local values rather than merging,
+so a merchant correcting a name in Shopify sees it corrected here rather than silently diverging.
+
+Email addresses are lower-cased on the way in, so `Buyer@Example.com` and `buyer@example.com` are one
+person rather than two contacts who each get their own copy of every campaign.
+
+The import runs as a Celery task, not in a request — it makes hundreds of rate-limited calls and can
+take minutes. A `ShopifyAuthError` is **not** retried, because a revoked token will not come back;
+other errors retry with a delay.
+
+Tests use a fake client returning canned pages rather than a live store, so the logic that matters is
+testable with no network, no credentials, and no dependence on one store's contents.
+
+Still to do in M3: the 15-minute incremental sync (FE-5) and the webhook pipeline (M4).
 
 ## Known environment problems
 

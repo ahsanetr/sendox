@@ -5,7 +5,10 @@ import { useCallback, useEffect, useState } from "react";
 import {
   beginShopifyInstall,
   disconnectShopifyStore,
+  getImportedData,
   getShopifyStatus,
+  syncShopifyStore,
+  type ImportedData,
   type ShopifyStatus,
 } from "@/lib/api";
 import { useSession } from "@/lib/session";
@@ -20,12 +23,14 @@ export function ShopifyPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
+  const [data, setData] = useState<ImportedData | null>(null);
 
   const workspaceId = activeWorkspace?.id ?? null;
 
   const load = useCallback(async (id: string) => {
     try {
       setStatus(await getShopifyStatus(id));
+      setData(await getImportedData(id));
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -119,6 +124,31 @@ export function ShopifyPanel() {
                 </span>
               </span>
               <Badge status={store.connected ? "done" : "planned"} />
+              {store.connected && (
+                <Button
+                  onClick={() =>
+                    void (async () => {
+                      setBusy(`sync-${store.id}`);
+                      setError(null);
+                      try {
+                        await syncShopifyStore(activeWorkspace.id, store.id);
+                        setOutcome(
+                          "Import queued. It runs in a worker — re-check in a few seconds.",
+                        );
+                        // Give the worker a head start before reading counts back.
+                        setTimeout(() => void load(activeWorkspace.id), 4000);
+                      } catch (cause) {
+                        setError(cause instanceof Error ? cause.message : String(cause));
+                      } finally {
+                        setBusy(null);
+                      }
+                    })()
+                  }
+                  disabled={busy !== null}
+                >
+                  {busy === `sync-${store.id}` ? "Queuing…" : "Import data"}
+                </Button>
+              )}
               {mayConnect && store.connected && (
                 <Button
                   onClick={() =>
@@ -178,6 +208,48 @@ export function ShopifyPanel() {
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
           Connecting a store requires the admin role; you are {role}.
         </p>
+      )}
+
+      {data && data.counts.contacts + data.counts.products > 0 && (
+        <div className="mt-5 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Imported from Shopify
+          </h3>
+          <dl className="mt-2 grid grid-cols-3 gap-4">
+            {[
+              ["Contacts", data.counts.contacts],
+              ["Events", data.counts.events],
+              ["Products", data.counts.products],
+            ].map(([label, value]) => (
+              <div key={String(label)}>
+                <dd className="font-mono text-xl tabular-nums">{String(value)}</dd>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">{String(label)}</dt>
+              </div>
+            ))}
+          </dl>
+
+          {data.top_contacts.length > 0 && (
+            <ul className="mt-3 divide-y divide-zinc-200 dark:divide-zinc-800">
+              {data.top_contacts.map((contact) => (
+                <li
+                  key={contact.email}
+                  className="flex flex-wrap items-baseline gap-2 py-1.5 text-xs"
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {contact.name ?? contact.email}
+                  </span>
+                  <span className="font-mono text-zinc-500 dark:text-zinc-400">
+                    {contact.orders} orders
+                  </span>
+                  <span className="font-mono tabular-nums">{contact.spent.toFixed(2)}</span>
+                  <Badge
+                    status={contact.consent === "subscribed" ? "done" : "planned"}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">

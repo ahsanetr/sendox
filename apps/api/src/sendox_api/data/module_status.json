@@ -93,7 +93,7 @@
       "release": "R1",
       "phase": "1.2",
       "status": "partial",
-      "note": "OAuth install flow, encrypted per-store tokens, Admin API client with leaky-bucket throttling and cursor pagination. Bulk import and incremental sync not started"
+      "note": "OAuth install, encrypted per-store tokens, Admin API client with leaky-bucket throttling and cursor pagination, idempotent bulk import of customers/orders/products. 15-minute incremental sync not started"
     },
     {
       "id": "M4",
@@ -107,7 +107,8 @@
       "name": "Contact Database & Behavioral Event Store",
       "release": "R1",
       "phase": "1.3",
-      "status": "planned"
+      "status": "partial",
+      "note": "Contacts, behavioural events and products with per-channel consent, all RLS-protected and populated by the Shopify import. Tagging, CSV import/export and the contact UI not started"
     },
     {
       "id": "M6",

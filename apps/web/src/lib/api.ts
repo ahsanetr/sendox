@@ -380,3 +380,24 @@ export const disconnectShopifyStore = (workspaceId: string, storeId: string) =>
     `/workspaces/${workspaceId}/shopify/stores/${storeId}`,
     { method: "DELETE" },
   );
+
+export type ImportedData = {
+  counts: { contacts: number; events: number; products: number };
+  top_contacts: {
+    email: string;
+    name: string | null;
+    consent: string;
+    orders: number;
+    spent: number;
+  }[];
+  products: { title: string; price: number | null; status: string | null }[];
+};
+
+export const syncShopifyStore = (workspaceId: string, storeId: string) =>
+  request<{ status: string; task_id: string; shop_domain: string }>(
+    `/workspaces/${workspaceId}/shopify/stores/${storeId}/sync`,
+    { method: "POST" },
+  );
+
+export const getImportedData = (workspaceId: string) =>
+  request<ImportedData>(`/workspaces/${workspaceId}/shopify/data`);

@@ -4,6 +4,7 @@ Email goes through here rather than the request path: a slow or unreachable mail
 server must not slow down a signup or leak its failure into the user's response.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -52,3 +53,45 @@ def queue_email(message: email.Outgoing) -> None:
         send_email.delay(message.to, message.subject, message.text)
     except Exception as exc:  # noqa: BLE001 - never fail the caller over delivery
         log.error("email.enqueue_failed", to=message.to, error=str(exc))
+
+
+@celery_app.task(name="sendox.import_shopify_store", bind=True, max_retries=3)
+def import_shopify_store(self: Any, tenant_id: str, store_id: str) -> dict[str, Any]:
+    """Pull a store's customers, orders and products into our tables.
+
+    Runs in a worker because a full import can take minutes and makes hundreds of
+    rate-limited calls — neither belongs in a request. The import itself is
+    idempotent, so a retry after a transient failure resumes rather than
+    duplicates.
+    """
+    import asyncio
+    import uuid as _uuid
+
+    from sendox_api.clients.shopify import ShopifyAuthError, ShopifyError
+    from sendox_api.db import tenant_session
+    from sendox_api.models import ShopifyStore
+    from sendox_api.services import shopify_stores, shopify_sync
+
+    settings = get_settings()
+    tenant = _uuid.UUID(tenant_id)
+
+    async def run() -> dict[str, Any]:
+        with tenant_session(settings, tenant) as session:
+            store = session.get(ShopifyStore, _uuid.UUID(store_id))
+            if store is None or not store.is_active:
+                return {"status": "skipped", "reason": "store not connected"}
+
+            client = shopify_stores.client_for(settings, store)
+            report = await shopify_sync.import_store(client, session, tenant)
+            store.last_sync_at = datetime.now(UTC)
+            return {"status": "ok", **report.as_dict()}
+
+    try:
+        return asyncio.run(run())
+    except ShopifyAuthError as exc:
+        # The merchant uninstalled, or revoked the token. Retrying cannot help.
+        log.warning("shopify.import_unauthorised", store=store_id, error=str(exc))
+        return {"status": "unauthorised", "detail": str(exc)}
+    except ShopifyError as exc:
+        log.error("shopify.import_failed", store=store_id, error=str(exc))
+        raise self.retry(exc=exc, countdown=30) from exc
