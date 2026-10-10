@@ -90,6 +90,10 @@ class Settings(BaseSettings):
     # registered on the app, and cannot be localhost.
     public_base_url: str | None = None
     shopify_dev_store: str | None = None
+    # Development only: dev storefronts are password-protected, and the crawler
+    # cannot read a brand's voice through a login wall. Never set in production,
+    # where merchant storefronts are public by definition.
+    shopify_storefront_password: str | None = None
 
     # AI (wired up in phase 0.5)
     anthropic_api_key: str | None = None

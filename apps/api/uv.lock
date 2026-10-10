@@ -2124,6 +2124,23 @@ wheels = [
 ]
 
 [[package]]
+name = "selectolax"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/f3/5948923cf44e52630566e24f753d1cb683b29afecedd7b75fde73e1e34b6/selectolax-1.0.0.tar.gz", hash = "sha256:d0184bda14dc2ca8915dbdfd18b45262fbaa3077d798f127808434de44fd7fb3", size = 3578801, upload-time = "2026-10-03T15:26:06.478Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d9/68/2606973bf32fcd2540620e01506f50621026af57e87c7d975772352e6ff7/selectolax-1.0.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:6ca6a371a8bef412f7587d4ff77236490450a648b243bf61c3362959c1e748a8", size = 1372526, upload-time = "2026-10-03T15:24:26.709Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/4f/69d9f52a10e7d45819021548aeea3fde404f84078f3ae386f103db5fc21c/selectolax-1.0.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:dca8670d64eabfd0aefc7170839ed992945d5380396d388cc2610d31c3587659", size = 1362890, upload-time = "2026-10-03T15:24:28.267Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/82/daf33da901fb65c9943505d6b82c23584fbde2de42712e80bb374db355c7/selectolax-1.0.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:5a0b2ef5e5706a583c6cc88f0191349b4a8cab8b3c27483c76deb6f5526251d5", size = 1472770, upload-time = "2026-10-03T15:24:29.809Z" },
+    { url = "https://files.pythonhosted.org/packages/39/2b/514aca29b35da4df671eb4ad20604bebbf633f25315aa4cbf9a9e7d30c33/selectolax-1.0.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9d78ef447f794818fbb3cc73b6f34baf682b83101061894d04d7774caaf47208", size = 1493195, upload-time = "2026-10-03T15:24:31.329Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/4e/2b5853130f9c6bb0d0ada9499f8b297a2c0eb2b171d3cb1faf4f11671600/selectolax-1.0.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:5daf0f21244bf480d26a2a24b65136c38e201b30d79f9a1f516308bbc29b9f6e", size = 1477695, upload-time = "2026-10-03T15:24:32.944Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/52/ab7d036ded19d246605f1205d6e82dbfcc6aa6966ecf3e533ae39d5428d9/selectolax-1.0.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:8047b901c96d42712a5d5cd4c2e77139703b2823fc8674fd6b927cca242247e1", size = 1498196, upload-time = "2026-10-03T15:24:34.57Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/e6/d1a8b8ef740ef18765f5b47a1b84fe7ac4c705d3fcfc556872445feb147f/selectolax-1.0.0-cp313-cp313-win32.whl", hash = "sha256:bc0f4882b423bb649c5892a55dc36704c8dbad4f08646146e353f97bb206f7d7", size = 1171587, upload-time = "2026-10-03T15:24:36.518Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/b9/4a4f3f34e6b048325022219d468cfe933fd0f1ef95bbf60c6c8d94c35959/selectolax-1.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:6af0c41164bf4f939a1ff771003ed8b8d93712486ff426555622c2bc13a4c6d4", size = 1237116, upload-time = "2026-10-03T15:24:38.14Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/a5/ea856632c594f807e85f5f372de61f72d138d179be1b956473aeaaa5f5d4/selectolax-1.0.0-cp313-cp313-win_arm64.whl", hash = "sha256:169b5e66e5929e2f68b2de46e939b47dc9e7abc446528ee3a0acb1fc21b036e3", size = 1217247, upload-time = "2026-10-03T15:24:39.943Z" },
+]
+
+[[package]]
 name = "sendox-api"
 version = "0.1.0"
 source = { editable = "." }
@@ -2139,6 +2156,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "redis" },
+    { name = "selectolax" },
     { name = "sentry-sdk", extra = ["fastapi"] },
     { name = "sqlalchemy" },
     { name = "structlog" },
@@ -2180,6 +2198,7 @@ requires-dist = [
     { name = "pyjwt", specifier = ">=2.9" },
     { name = "redis", specifier = ">=5.2" },
     { name = "scikit-learn", marker = "extra == 'ml'", specifier = ">=1.5" },
+    { name = "selectolax", specifier = ">=0.3" },
     { name = "sentence-transformers", marker = "extra == 'ml'", specifier = ">=3.3" },
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.18" },
     { name = "sqlalchemy", specifier = ">=2.0.36" },

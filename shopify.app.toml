@@ -1,0 +1,35 @@
+# Shopify app configuration, deployed with: shopify app deploy
+#
+# This app has no dashboard fields for its URLs — the new Shopify app platform
+# manages them as code, versioned here and released through the CLI. That is why
+# there is nothing to paste into App settings.
+#
+# `application_url` and the redirect URL must point at a public HTTPS origin.
+# Shopify will not redirect to localhost, so in development both carry the
+# current cloudflared tunnel. A free quick tunnel gets a new hostname each time
+# it restarts, so these two values change together and need a redeploy.
+
+client_id = "72c258c9d950b9590408e50537509d78"
+name = "Sendox"
+# No `handle`: handles are globally unique and this app already has one.
+# Declaring it here tries to claim it again, which fails validation.
+application_url = "https://ethernet-cast-pathology-catering.trycloudflare.com"
+
+# Not embedded: Sendox is a standalone dashboard the merchant signs in to, the
+# same shape as Klaviyo — not a panel rendered inside the Shopify admin.
+embedded = false
+
+[access_scopes]
+# Read-only. Sendox never writes to a merchant's store.
+# read_checkouts is what makes abandoned-cart recovery possible (M14 FE-2);
+# without it Shopify sends no checkout events at all.
+scopes = "read_customers,read_orders,read_products,read_checkouts"
+
+[auth]
+redirect_urls = [ "https://ethernet-cast-pathology-catering.trycloudflare.com/shopify/callback" ]
+
+[webhooks]
+api_version = "2026-10"
+
+[build]
+automatically_update_urls_on_dev = false

@@ -19,6 +19,7 @@ dependencies = [
     "pwdlib[argon2]>=0.2",
     "pyjwt>=2.9",
     "cryptography>=43",
+    "selectolax>=0.3",
 ]
 
 # Opt-in groups keep the default install small. torch-sized things live in `ml`.
