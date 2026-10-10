@@ -95,3 +95,67 @@ def import_shopify_store(self: Any, tenant_id: str, store_id: str) -> dict[str, 
     except ShopifyError as exc:
         log.error("shopify.import_failed", store=store_id, error=str(exc))
         raise self.retry(exc=exc, countdown=30) from exc
+
+
+@celery_app.task(name="sendox.index_brand_knowledge", bind=True, max_retries=2)
+def index_brand_knowledge(self: Any, tenant_id: str, store_id: str) -> dict[str, Any]:
+    """Crawl a storefront and index what it says into the workspace's knowledge base.
+
+    In a worker because it is deliberately slow: one request per second, because
+    a merchant's storefront is a shop and a crawl must never be why a real
+    customer waits.
+    """
+    import asyncio
+    import uuid as _uuid
+
+    from sendox_api.clients import chroma
+    from sendox_api.clients.storefront import StorefrontCrawler
+    from sendox_api.db import tenant_session
+    from sendox_api.models import ShopifyStore
+    from sendox_api.services import brand_knowledge
+
+    settings = get_settings()
+    tenant = _uuid.UUID(tenant_id)
+
+    async def run() -> dict[str, Any]:
+        with tenant_session(settings, tenant) as session:
+            store = session.get(ShopifyStore, _uuid.UUID(store_id))
+            if store is None or not store.is_active:
+                return {"status": "skipped", "reason": "store not connected"}
+            domain = store.shop_domain
+
+        crawler = StorefrontCrawler(
+            domain,
+            # Development only: a dev storefront hides behind a password, and a
+            # brand's voice cannot be read through a login wall.
+            storefront_password=settings.shopify_storefront_password,
+        )
+        report = await crawler.crawl()
+        if not report.pages:
+            return {
+                "status": "empty",
+                "reason": "nothing readable was found",
+                "skipped": report.skipped[:5],
+            }
+
+        chunks = brand_knowledge.chunks_from_pages(tenant, report.pages)
+        written = await chroma.aupsert_chunks(settings, tenant, chunks)
+        stats = brand_knowledge.stats_for(report.pages, chunks)
+
+        with tenant_session(settings, tenant) as session:
+            store = session.get(ShopifyStore, _uuid.UUID(store_id))
+            if store is not None:
+                store.last_indexed_at = datetime.now(UTC)
+
+        return {
+            "status": "ok",
+            "written": written,
+            "robots_blocked": report.robots_blocked,
+            **stats.as_dict(),
+        }
+
+    try:
+        return asyncio.run(run())
+    except Exception as exc:
+        log.error("brand_knowledge.index_failed", store=store_id, error=str(exc))
+        raise self.retry(exc=exc, countdown=60) from exc

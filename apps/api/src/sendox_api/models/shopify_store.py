@@ -38,6 +38,9 @@ class ShopifyStore(UUIDPrimaryKey, TenantScoped, Timestamps, Base):
 
     installed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # When the storefront was last crawled and indexed. Separate from last_sync_at
+    # because the two read different sources: the Admin API, and the public site.
+    last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Set when Shopify tells us the app was removed. The row is kept so the
     # workspace keeps its history and can reconnect without losing anything.
     uninstalled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -122,7 +122,8 @@
       "name": "Brand Onboarding & Context Extraction",
       "release": "R1",
       "phase": "1.4",
-      "status": "planned"
+      "status": "partial",
+      "note": "Storefront crawler: sitemap discovery, robots.txt, 1 req/sec, boilerplate removal by cross-page repetition. Onboarding wizard, brand asset upload and S3 not started"
     },
     {
       "id": "M7",
@@ -130,7 +131,7 @@
       "release": "R1",
       "phase": "1.5",
       "status": "partial",
-      "note": "Vector store, embeddings, upsert and semantic search working. Chunking pipeline, brand-profile schema and KB versioning not started"
+      "note": "Vector store, local embeddings, semantic search, and paragraph-aware chunking of crawled pages with stable ids so re-crawls overwrite. Brand-profile schema, versioning and inspector UI not started"
     },
     {
       "id": "M8",

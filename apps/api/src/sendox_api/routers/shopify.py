@@ -49,6 +49,11 @@ class ConnectRequest(BaseModel):
     shop: str = Field(min_length=3, examples=["your-store.myshopify.com"])
 
 
+class KnowledgeQuery(BaseModel):
+    query: str = Field(min_length=1, examples=["what is your returns policy?"])
+    top_k: int = Field(default=5, ge=1, le=20)
+
+
 class StoreOut(BaseModel):
     id: str
     shop_domain: str
@@ -58,6 +63,7 @@ class StoreOut(BaseModel):
     connected: bool
     installed_at: str | None
     last_sync_at: str | None
+    last_indexed_at: str | None
 
 
 @router.get("/status", summary="Is Shopify connect available, and what is connected?")
@@ -73,6 +79,9 @@ async def connection_status(workspace: Workspace, settings: SettingsDep) -> dict
                 connected=store.is_active,
                 installed_at=store.installed_at.isoformat() if store.installed_at else None,
                 last_sync_at=store.last_sync_at.isoformat() if store.last_sync_at else None,
+                last_indexed_at=store.last_indexed_at.isoformat()
+                if store.last_indexed_at
+                else None,
             )
             for store in shopify_stores.stores_for_tenant(session, workspace.tenant_id)
         ]
@@ -187,6 +196,93 @@ async def start_sync(store_id: str, workspace: Workspace, settings: SettingsDep)
 
     task = import_shopify_store.delay(str(workspace.tenant_id), store_id)
     return {"status": "queued", "task_id": task.id, "shop_domain": domain}
+
+
+@router.post("/stores/{store_id}/index", summary="Crawl the storefront and index its voice")
+async def start_indexing(
+    store_id: str, workspace: Workspace, settings: SettingsDep
+) -> dict[str, Any]:
+    """Queue a storefront crawl.
+
+    Separate from the data import on purpose: that one reads the Admin API for
+    structured records, this one reads the public site for how the brand writes.
+    """
+    try:
+        workspace.require(MemberRole.EDITOR)
+    except InsufficientRole as exc:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=f"indexing requires the {exc.required} role; you are {exc.actual}",
+        ) from exc
+
+    with tenant_session(settings, workspace.tenant_id, workspace.user_id) as session:
+        stores = shopify_stores.stores_for_tenant(session, workspace.tenant_id)
+        store = next((s for s in stores if str(s.id) == store_id and s.is_active), None)
+        if store is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="store not connected")
+        domain = store.shop_domain
+
+    from sendox_api.tasks import index_brand_knowledge
+
+    task = index_brand_knowledge.delay(str(workspace.tenant_id), store_id)
+    return {"status": "queued", "task_id": task.id, "shop_domain": domain}
+
+
+@router.get("/knowledge", summary="What Sendox has learned about this brand")
+async def brand_knowledge_state(workspace: Workspace, settings: SettingsDep) -> dict[str, Any]:
+    """Size of the knowledge base plus a sample, so the learning is inspectable.
+
+    Scope M7 FE-6: a brand owner should be able to see what the AI thinks it
+    knows, and say when it is wrong.
+    """
+    from sendox_api.clients import chroma
+
+    try:
+        stats = await chroma.astats(settings, workspace.tenant_id)
+        sample = await chroma.aquery(
+            settings,
+            workspace.tenant_id,
+            "what does this brand sell and how does it write?",
+            top_k=6,
+        )
+    except Exception as exc:  # noqa: BLE001 - report, never 500 a status endpoint
+        return {"available": False, "error": f"{type(exc).__name__}: {exc}"}
+
+    return {
+        "available": True,
+        **stats,
+        "sample": [
+            {
+                "similarity": round(match.similarity, 4),
+                "content_type": match.metadata.get("content_type"),
+                "source_url": match.metadata.get("source_url"),
+                "title": match.metadata.get("title"),
+                "text": match.text[:400],
+            }
+            for match in sample
+        ],
+    }
+
+
+@router.post("/knowledge/search", summary="Search this brand's knowledge base")
+async def search_knowledge(
+    request: KnowledgeQuery, workspace: Workspace, settings: SettingsDep
+) -> dict[str, Any]:
+    from sendox_api.clients import chroma
+
+    matches = await chroma.aquery(settings, workspace.tenant_id, request.query, top_k=request.top_k)
+    return {
+        "query": request.query,
+        "matches": [
+            {
+                "similarity": round(match.similarity, 4),
+                "content_type": match.metadata.get("content_type"),
+                "source_url": match.metadata.get("source_url"),
+                "text": match.text[:500],
+            }
+            for match in matches
+        ],
+    }
 
 
 @router.get("/data", summary="What the import has brought in")

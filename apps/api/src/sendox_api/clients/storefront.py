@@ -46,6 +46,12 @@ STRIP_SELECTORS = (
     "[aria-hidden='true']",
 )
 
+# A line appearing on this share of pages is site furniture, not brand voice.
+# Catching it by repetition rather than by selector is what makes this work on
+# any theme, including ones we have never seen.
+BOILERPLATE_RATIO = 0.5
+MIN_PAGES_FOR_BOILERPLATE = 4
+
 
 @dataclass(frozen=True, slots=True)
 class Page:
@@ -83,8 +89,12 @@ def classify(url: str) -> str:
     return "home"
 
 
-def extract_text(html: str) -> tuple[str, str]:
-    """Return (title, readable text) with chrome removed."""
+def extract_text(html: str) -> tuple[str, list[str]]:
+    """Return (title, content lines) with chrome removed.
+
+    Lines rather than one blob, because the boilerplate pass below works by
+    spotting lines that repeat across pages.
+    """
     tree = LexborHTMLParser(html)
     for selector in STRIP_SELECTORS:
         for node in tree.css(selector):
@@ -93,11 +103,49 @@ def extract_text(html: str) -> tuple[str, str]:
     title_node = tree.css_first("title")
     title = title_node.text(strip=True) if title_node else ""
 
-    body = tree.body
-    text = body.text(separator=" ", strip=True) if body else ""
-    # Collapse the whitespace a template leaves behind, so chunking later sees
-    # sentences rather than indentation.
-    return title, re.sub(r"\s+", " ", text).strip()
+    # Prefer the page's main region when the theme marks one: it is the single
+    # most reliable signal of "this is the content, the rest is furniture".
+    root = tree.css_first("main") or tree.css_first("[role=main]") or tree.body
+    raw = root.text(separator="\n", strip=True) if root else ""
+
+    lines = [re.sub(r"\s+", " ", line).strip() for line in raw.split("\n")]
+    return title, [line for line in lines if line]
+
+
+def strip_boilerplate(pages: list[tuple[str, str, list[str]]]) -> list[tuple[str, str, str]]:
+    """Drop lines that repeat across the site.
+
+    Theme chrome is, by definition, the text every page shares — a cart drawer,
+    a currency selector, a cookie notice. Selectors only catch the markup we
+    thought to name; repetition catches the rest, on any theme.
+
+    Without this, every chunk opens with the same hundred words and the
+    embeddings all crowd together: retrieval then scores highly while returning
+    the cart, which is worse than returning nothing because it looks like it
+    worked.
+    """
+    if len(pages) < MIN_PAGES_FOR_BOILERPLATE:
+        return [(url, title, " ".join(lines)) for url, title, lines in pages]
+
+    seen: dict[str, int] = {}
+    for _, _, lines in pages:
+        for line in set(lines):
+            seen[line] = seen.get(line, 0) + 1
+
+    threshold = max(2, int(len(pages) * BOILERPLATE_RATIO))
+    furniture = {line for line, count in seen.items() if count >= threshold}
+
+    cleaned: list[tuple[str, str, str]] = []
+    for url, title, lines in pages:
+        kept = [line for line in lines if line not in furniture]
+        cleaned.append((url, title, " ".join(kept)))
+
+    log.info(
+        "storefront.boilerplate_removed",
+        lines_dropped=len(furniture),
+        pages=len(pages),
+    )
+    return cleaned
 
 
 class StorefrontCrawler:
@@ -216,6 +264,8 @@ class StorefrontCrawler:
             await self._load_robots(client)
             await self._unlock(client)
 
+            collected: list[tuple[str, str, list[str]]] = []
+
             urls = await self.discover(client)
             if not urls:
                 report.skipped.append(
@@ -238,15 +288,20 @@ class StorefrontCrawler:
                     report.skipped.append(f"{url}: HTTP {response.status_code}")
                     continue
 
-                title, text = extract_text(response.text)
-                if len(text.split()) < 25:
-                    # Too little to carry a voice; keeping it would dilute search.
-                    report.skipped.append(f"{url}: too little text")
-                else:
-                    report.pages.append(Page(url=url, title=title, text=text, kind=classify(url)))
+                title, lines = extract_text(response.text)
+                collected.append((url, title, lines))
 
                 # Serialised and spaced: a storefront is a shop, not a test target.
                 await asyncio.sleep(self.delay)
+
+        # Furniture can only be spotted once every page is in hand, so the length
+        # check waits until after it is removed: before stripping, a page that is
+        # nothing but chrome still looks substantial.
+        for url, title, text in strip_boilerplate(collected):
+            if len(text.split()) < 25:
+                report.skipped.append(f"{url}: no content beyond site furniture")
+                continue
+            report.pages.append(Page(url=url, title=title, text=text, kind=classify(url)))
 
         log.info(
             "storefront.crawled",
