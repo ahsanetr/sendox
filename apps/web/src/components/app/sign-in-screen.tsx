@@ -59,13 +59,13 @@ export function SignInScreen() {
     <div className="grid min-h-full lg:grid-cols-2">
       {/* The dark half states what the product does, in its own words, so the
           first screen is an argument rather than a form with a logo above it. */}
-      <div className="hidden flex-col justify-between bg-sidebar p-10 lg:flex">
-        <p className="text-base font-semibold text-white">Sendox</p>
+      <div className="hidden flex-col justify-between bg-sidebar p-12 lg:flex">
+        <p className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-white">Sendox</p>
         <div className="max-w-md">
-          <p className="text-2xl leading-snug font-medium text-white">
+          <p className="text-[2rem] leading-[1.2] font-medium tracking-[-0.02em] text-white">
             Your email marketing, written and scheduled for you.
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-sidebar-foreground">
+          <p className="mt-5 text-[0.9375rem] leading-relaxed text-sidebar-foreground">
             Connect your Shopify store and Sendox learns how your brand writes, plans
             the campaigns worth sending, drafts them, and waits for your approval.
           </p>
@@ -75,19 +75,19 @@ export function SignInScreen() {
         </p>
       </div>
 
-      <div className="flex items-center justify-center p-6 sm:p-10">
+      <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm">
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em]">
             {mode === "signup" ? "Create your account" : "Sign in"}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-2 text-[0.9375rem] text-muted-foreground">
             {mode === "signup"
               ? "You will need a Shopify store to connect afterwards."
               : "Welcome back."}
           </p>
 
           {error && (
-            <p className="mt-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="mt-5 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
               {error}
             </p>
           )}
@@ -102,14 +102,14 @@ export function SignInScreen() {
                 type="button"
                 onClick={() => void confirm()}
                 disabled={busy}
-                className="mt-4 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
+                className="mt-5 w-full rounded-lg bg-primary px-3.5 py-2.5 text-sm font-medium text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
               >
                 {busy ? "Confirming…" : "Confirm email address"}
               </button>
             </div>
           ) : (
             <form
-              className="mt-6 flex flex-col gap-4"
+              className="mt-7 flex flex-col gap-5"
               onSubmit={(event) => {
                 event.preventDefault();
                 void submit();
@@ -169,14 +169,14 @@ export function SignInScreen() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-1 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
+                className="mt-2 w-full rounded-lg bg-primary px-3.5 py-2.5 text-sm font-medium text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
               >
                 {busy ? "Working…" : mode === "signup" ? "Create account" : "Sign in"}
               </button>
             </form>
           )}
 
-          <p className="mt-6 text-sm text-muted-foreground">
+          <p className="mt-7 text-sm text-muted-foreground">
             {mode === "signup" ? "Already have an account?" : "New to Sendox?"}{" "}
             <button
               type="button"
@@ -197,7 +197,7 @@ export function SignInScreen() {
 }
 
 const FIELD =
-  "w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20";
+  "w-full rounded-lg bg-card px-3.5 py-2.5 text-sm ring-1 ring-inset ring-input outline-none transition placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring";
 
 function Labelled({
   label,

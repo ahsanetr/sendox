@@ -617,6 +617,45 @@ One naming collision to watch: shadcn installs into `src/components/ui/`, which 
 existing `src/components/ui.tsx`. The old file became `dev-ui.tsx`, and the dev panels still use it —
 they keep their utilitarian look on purpose.
 
+## UI pass two — removing what dated it · 12 Oct 2026
+
+Ahsan's note: *"modern design philosophy, not a software from 2016"*. Fair. The first pass was
+correct but austere — a 1px border around every object, 8px corners everywhere, 14px headings and
+tight rows. That combination is exactly what dates an interface, and it is what enterprise tools
+looked like a decade ago.
+
+What changed, and why each one:
+
+- **Borders became space and elevation.** A `.panel` surface carries a soft two-layer shadow instead
+  of a hairline outline. Borders survive only in tables, where a column edge genuinely carries
+  meaning. Separation by whitespace reads as confidence; separation by outline reads as caution.
+- **One radius became three.** `--radius` is now 14px for panels, 8px for controls, full for pills.
+  A button and a page panel are not the same kind of object, so they should not share a corner —
+  one radius stamped on everything is a tell.
+- **Figures got bigger.** A number someone came here to read should not be set at the same size as
+  the label explaining it. Page titles went to 28px, figures to 36px.
+- **Rows breathe and respond.** Table rows gained height, lost their per-row rule, and gained a
+  hover state. Density is not the same thing as cramped.
+- **The rail widened** from 240 to 272px with larger hit areas and rounded-xl active pills.
+
+What deliberately did **not** change: the warm neutrals, the cobalt accent, Archivo, "Waiting on
+you" as the hero, and figures-rather-than-cards. Those were choices about this product, not
+artefacts of a dated style.
+
+## Fixture storefront for end-to-end tests · 12 Oct 2026
+
+The two worst crawler bugs so far — a sitemap query string defeating a suffix check, and boilerplate
+that made every chunk score highly while returning the cart — were both invisible to canned-page
+tests. They only appear when something crawls a whole site.
+
+So `tests/fixtures/storefront` is a small brand with an About page, six written product descriptions
+and a shipping policy, roughly 900 words of actual voice wrapped in the chrome a Shopify theme
+produces. A test serves it over HTTP on a random port and crawls it exactly like a real store.
+
+This is **test infrastructure, not seeded product data**. It makes the crawler's behaviour provable
+in CI without depending on one development store's contents — and it gives the AI agents something
+with real voice to be judged against, which Shopify's demo products cannot do.
+
 ## Known environment problems
 
 - **Disk pressure.** The Mac ran down to 1.2 GB free of 228 GB, which forced Docker's filesystem

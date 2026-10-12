@@ -17,7 +17,9 @@
    never looks like "this is a button".
 --------------------------------------------------------------------------- */
 :root {
-  --radius: 0.5rem;
+  /* Larger than the 8px that dates an interface, and varied by role: a page
+     panel is not the same object as a button, so they do not share a corner. */
+  --radius: 0.875rem;
 
   /* Surfaces */
   --canvas: oklch(0.985 0.004 85);       /* warm off-white page ground */
@@ -166,6 +168,29 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* Separation comes from space and a quiet change of surface, not from a
+     1px line around everything. Borders are kept for tables, where a column
+     edge genuinely carries meaning. */
+  .panel {
+    @apply rounded-[--radius] bg-card;
+    box-shadow:
+      0 1px 2px -1px oklch(0.2 0.01 70 / 0.08),
+      0 2px 8px -2px oklch(0.2 0.01 70 / 0.06);
+  }
+  .dark .panel {
+    box-shadow:
+      0 1px 2px -1px oklch(0 0 0 / 0.4),
+      0 2px 10px -3px oklch(0 0 0 / 0.3);
+  }
+
+  /* Rows lift rather than rule off. */
+  .row-hover {
+    @apply transition-colors;
+  }
+  .row-hover:hover {
+    background: var(--surface-sunken);
+  }
   body {
     @apply bg-background text-foreground;
   }
@@ -176,6 +201,29 @@ body {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+
+  /* Separation comes from space and a quiet change of surface, not from a
+     1px line around everything. Borders are kept for tables, where a column
+     edge genuinely carries meaning. */
+  .panel {
+    @apply rounded-[--radius] bg-card;
+    box-shadow:
+      0 1px 2px -1px oklch(0.2 0.01 70 / 0.08),
+      0 2px 8px -2px oklch(0.2 0.01 70 / 0.06);
+  }
+  .dark .panel {
+    box-shadow:
+      0 1px 2px -1px oklch(0 0 0 / 0.4),
+      0 2px 10px -3px oklch(0 0 0 / 0.3);
+  }
+
+  /* Rows lift rather than rule off. */
+  .row-hover {
+    @apply transition-colors;
+  }
+  .row-hover:hover {
+    background: var(--surface-sunken);
   }
   body {
     @apply bg-background text-foreground;

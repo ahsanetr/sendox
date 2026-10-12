@@ -98,6 +98,10 @@ db-reset: ## Drop and recreate the schema (DESTROYS local data)
 status-page: ## Regenerate docs/status-page.html from live API data (then publish it)
 	$(UV) run --quiet python scripts/status-page.py
 
+.PHONY: tunnel
+tunnel: ## Start a public tunnel and write its URL into .env and shopify.app.toml
+	./scripts/tunnel.sh
+
 .PHONY: devlog
 devlog: ## Regenerate docs/Sendox-Development-Log.docx from docs/DEVLOG.md
 	$(UV) run --quiet --with python-docx python scripts/devlog-docx.py

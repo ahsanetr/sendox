@@ -12,12 +12,11 @@ import {
   type ShopifyStatus,
 } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { EmptyState, Pill } from "@/components/app/primitives";
+import { Button, EmptyState, Pill } from "@/components/app/primitives";
 
 const RANK = { viewer: 0, editor: 1, admin: 2, owner: 3 } as const;
 
-const ACTION =
-  "shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40";
+
 
 export function ShopifyPanel() {
   const { activeWorkspace, role } = useSession();
@@ -77,16 +76,16 @@ export function ShopifyPanel() {
 
   return (
     <div>
-      {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+      {error && <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{error}</p>}
       {outcome && (
         <div className="mb-3">
-          <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">{outcome}</p>
+          <p className="rounded-lg bg-primary/10 px-3.5 py-2.5 text-sm text-primary">{outcome}</p>
         </div>
       )}
 
       {status && !status.ready && (
         <div className="mb-3">
-          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{status.hint}</p>
+          <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{status.hint}</p>
         </div>
       )}
 
@@ -122,7 +121,7 @@ export function ShopifyPanel() {
               </span>
               <Pill tone={store.connected ? "positive" : "neutral"}>{store.connected ? "Connected" : "Disconnected"}</Pill>
               {store.connected && (
-                <button type="button" onClick={() =>
+                <Button onClick={() =>
                     void (async () => {
                       setBusy(`sync-${store.id}`);
                       setError(null);
@@ -139,12 +138,12 @@ export function ShopifyPanel() {
                         setBusy(null);
                       }
                     })()
-                  } disabled={busy !== null} className={ACTION}>
+                  } disabled={busy !== null}>
                   {busy === `sync-${store.id}` ? "Queuing…" : "Import data"}
-                </button>
+                </Button>
               )}
               {mayConnect && store.connected && (
-                <button type="button" onClick={() =>
+                <Button onClick={() =>
                     void (async () => {
                       setBusy(store.id);
                       try {
@@ -156,9 +155,9 @@ export function ShopifyPanel() {
                         setBusy(null);
                       }
                     })()
-                  } disabled={busy !== null} className={ACTION}>
+                  } disabled={busy !== null}>
                   Disconnect
-                </button>
+                </Button>
               )}
             </li>
           ))}
@@ -178,15 +177,15 @@ export function ShopifyPanel() {
               id="shopify-shop"
               value={shop}
               onChange={(event) => setShop(event.target.value)}
-              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
+              className="w-full rounded-lg bg-card px-3.5 py-2.5 text-sm ring-1 ring-inset ring-input outline-none transition placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
               placeholder="your-store.myshopify.com"
               disabled={!mayConnect || !status?.ready}
             />
           </label>
         </div>
-        <button type="button" onClick={() => void connect()} disabled={busy !== null || !mayConnect || !status?.ready || shop.trim().length < 3} className={ACTION}>
+        <Button onClick={() => void connect()} disabled={busy !== null || !mayConnect || !status?.ready || shop.trim().length < 3}>
           {busy === "install" ? "Redirecting…" : "Connect store"}
-        </button>
+        </Button>
       </form>
 
       {!mayConnect && (
