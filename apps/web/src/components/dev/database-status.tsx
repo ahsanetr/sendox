@@ -7,7 +7,7 @@ import { Badge, Card, ErrorNote } from "@/components/dev-ui";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2 py-1.5">
-      <span className="w-40 shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+      <span className="w-40 shrink-0 text-xs text-muted-foreground">
         {label}
       </span>
       <span className="min-w-0 font-mono text-xs">{children}</span>
@@ -29,7 +29,7 @@ export function DatabaseStatus() {
   if (!data) {
     return (
       <Card title="Database & tenant isolation">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-xs text-muted-foreground">Loading…</p>
       </Card>
     );
   }
@@ -61,14 +61,14 @@ export function DatabaseStatus() {
         </ErrorNote>
       )}
 
-      <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+      <div className="divide-y divide-border">
         <Field label="Migration revision">{data.migration_revision ?? "none"}</Field>
         <Field label="Session role">
           {data.session_role}
           {data.session_is_superuser ? (
-            <span className="ml-2 text-rose-600 dark:text-rose-400">superuser</span>
+            <span className="ml-2 text-destructive">superuser</span>
           ) : (
-            <span className="ml-2 text-emerald-600 dark:text-emerald-400">
+            <span className="ml-2 text-positive">
               not superuser
             </span>
           )}
@@ -82,7 +82,7 @@ export function DatabaseStatus() {
         </Field>
       </div>
 
-      <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mt-3 text-xs text-muted-foreground">
         Every tenant-scoped table carries a FORCE&apos;d policy comparing{" "}
         <code>tenant_id</code> against the <code>app.current_tenant_id</code> session
         setting, and application sessions run as a non-superuser role. A query that

@@ -297,9 +297,9 @@
 <span class="v ok">PASS</span><span class="vl">root endpoint identifies the service</span><span class="vd">v0.1.0</span>
 <span class="v ok">PASS</span><span class="vl">liveness probe</span><span class="vd"></span>
 <span class="v ok">PASS</span><span class="vl">readiness: all backing services ok</span><span class="vd"></span>
-<span class="v ok">PASS</span><span class="vl">  └ postgres                               1</span><span class="vd">4.0 ms</span>
-<span class="v ok">PASS</span><span class="vl">  └ redis                                  1</span><span class="vd">1.6 ms</span>
-<span class="v ok">PASS</span><span class="vl">  └ chromadb                               9</span><span class="vd">.3 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ postgres                               1</span><span class="vd">3.6 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ redis                                  1</span><span class="vd">1.2 ms</span>
+<span class="v ok">PASS</span><span class="vl">  └ chromadb                               9</span><span class="vd">.1 ms</span>
 <span class="v ok">PASS</span><span class="vl">  └ mjml                                   5</span><span class="vd">.7 ms</span>
 
 <span class="vgroup">Build status</span>
@@ -312,7 +312,7 @@
 <span class="v ok">PASS</span><span class="vl">tenant isolation enforced</span><span class="vd"></span>
 
 <span class="vgroup">Queue (Redis + Celery worker)</span>
-<span class="v ok">PASS</span><span class="vl">task enqueued and executed by a worker</span><span class="vd">b998e3cd…</span>
+<span class="v ok">PASS</span><span class="vl">task enqueued and executed by a worker</span><span class="vd">d1cd091c…</span>
 
 <span class="vgroup">MJML renderer</span>
 <span class="v ok">PASS</span><span class="vl">sidecar health endpoint</span><span class="vd"></span>
@@ -369,24 +369,28 @@
     <h2>Where the project stands</h2>
     <div class="two">
       <div>
-        <h3>Working <span class="eyebrow">verified</span></h3>
+        <h3>Done <span class="eyebrow">7 items</span></h3>
         <ul class="yes">
-          <li><b>Infrastructure.</b> Eight-service stack (API, workers, Postgres, Redis, vector database, email renderer, mail capture) booting from one command, with CI.</li>
-          <li><b>Workspace data isolation.</b> Enforced inside Postgres: a query that forgets to filter by workspace returns nothing rather than another brand's data.</li>
-          <li><b>Brand knowledge retrieval.</b> Content is embedded locally and searched by meaning — asking "can I send something back?" returns the returns policy, which shares none of those words.</li>
-          <li><b>Email rendering.</b> Produces responsive HTML that holds up across mail clients; invalid input is reported with line numbers rather than crashing.</li>
-          <li><b>Background job queue.</b> Proven end to end, which is what makes timed automation possible later.</li>
+          <li><b>Monorepo, compose stack, CI.</b> 8 services healthy; ruff + mypy strict + 10 tests + 3 MJML tests green</li>
+          <li><b>Alembic, tenants/users schema, Postgres RLS.</b> Alembic + tenants/users/memberships/audit_logs; RLS enforced via a non-superuser app role, proven by 7 isolation tests</li>
+          <li><b>Web shell + NextAuth -&gt; FastAPI JWT.</b> Web shell with navigation, session context and an httpOnly-cookie session</li>
+          <li><b>Celery worker + beat round-trip.</b> Landed early with 0.1: sendox.ping enqueued from the API returns SUCCESS</li>
+          <li><b>Anthropic + Chroma smoke harness.</b> Vector store client (collection per tenant) + Claude client</li>
+          <li><b>Product UI foundation — app shell and design system.</b> Dark navigation rail with lucide icons, light canvas, Geist type</li>
+          <li><b>User Authentication &amp; Workspace Management.</b> Registration + email confirmation, cookie sessions, password reset, workspaces, 4 roles, invitations, activity log, GDPR account deletion</li>
         </ul>
       </div>
       <div>
-        <h3>Not built yet <span class="eyebrow">23 modules</span></h3>
+        <h3>Started or not begun <span class="eyebrow">5 partial, 19 planned</span></h3>
         <ul class="no">
-          <li><b>Accounts and login.</b> No authentication yet — next piece of work.</li>
-          <li><b>Shopify connection.</b> Blocked on partner app credentials.</li>
-          <li><b>The AI agents.</b> Strategy, copywriting, design and optimisation — transport is ready, no generation yet.</li>
-          <li><b>Campaigns, flows, sending and tracking.</b> Nothing is delivered to a real inbox yet.</li>
-          <li><b>SMS and WhatsApp.</b> Scheduled for March–April 2027; sender registration must start months earlier.</li>
-          <li><b>Billing, signup forms, analytics.</b> Final release.</li>
+          <li><b>Design Agent &amp; MJML Email Renderer.</b> MJML render service built and working in 0.1. Layout library and AI layout selection not started</li>
+          <li><b>Shopify Connection &amp; Data Synchronization.</b> OAuth install, encrypted per-store tokens, Admin API client with leaky-bucket throttling and cursor pagination, idempotent bulk import of customers/orders/products</li>
+          <li><b>Contact Database &amp; Behavioral Event Store.</b> Contacts, behavioural events and products with per-channel consent, all RLS-protected and populated by the Shopify import</li>
+          <li><b>Copywriting Agent.</b> Not started.</li>
+          <li><b>AI Content Validation &amp; Approval Layer.</b> Not started.</li>
+          <li><b>Campaign Engine (Email, SMS &amp; WhatsApp).</b> Not started.</li>
+          <li><b>Flow Engine (Multi-Channel).</b> Not started.</li>
+          <li><b>Signup Forms &amp; Subscriber Growth.</b> Not started.</li>
         </ul>
       </div>
     </div>
@@ -404,7 +408,7 @@
 <li class="row done"><span class="rid">0.4</span><span class="rname">Celery worker + beat round-trip<p class="note">Landed early with 0.1: sendox.ping enqueued from the API returns SUCCESS</p></span><span class="chip done">done</span></li>
 <li class="row done"><span class="rid">0.5</span><span class="rname">Anthropic + Chroma smoke harness<p class="note">Vector store client (collection per tenant) + Claude client. Embeddings run locally via ONNX MiniLM, 384 dims, no API key</p></span><span class="chip done">done</span></li>
 <li class="row planned"><span class="rid">0.6</span><span class="rname">Long-lead items filed (SES, Shopify, SMS, WhatsApp)<p class="note">Blocks R1 sending and R3 channels. Not a coding task</p></span><span class="chip planned">planned</span></li>
-<li class="row done"><span class="rid">1.3</span><span class="rname">Product UI foundation — app shell and design system<p class="note">Dark navigation rail, light canvas, warm neutrals with a cobalt accent, Archivo type. shadcn/ui initialised. Home leads with what needs approval rather than metrics. Dev dashboard moved to /dev</p></span><span class="chip done">done</span></li></ul>
+<li class="row done"><span class="rid">1.3</span><span class="rname">Product UI foundation — app shell and design system<p class="note">Dark navigation rail with lucide icons, light canvas, Geist type. Colour, spacing and radius come from a generated design system (ui-ux-pro-max, Minimalism &amp; Swiss) persisted at design-system/sendox/MASTER.md, and five switchable schemes ship with it. Every component reads tokens — no hardcoded palette classes remain. Home leads with what needs approval rather than metrics</p></span><span class="chip done">done</span></li></ul>
   </section>
 
   <section class="blk">
@@ -467,7 +471,8 @@
 
   <section class="blk">
     <h2>History</h2>
-    <ul class="commits"><li><span class="sha">f3c5b94</span><span class="csub">Chunking, indexing, and a retrieval bug that looked like success</span><span class="cdate">2026-10-10</span></li>
+    <ul class="commits"><li><span class="sha">0272064</span><span class="csub">UI pass two, a tunnel that manages itself, and a fixture storefront</span><span class="cdate">2026-10-12</span></li>
+<li><span class="sha">f3c5b94</span><span class="csub">Chunking, indexing, and a retrieval bug that looked like success</span><span class="cdate">2026-10-10</span></li>
 <li><span class="sha">6549c69</span><span class="csub">Storefront crawler and Shopify app config as code (M6 FE-3/4/6)</span><span class="cdate">2026-10-10</span></li>
 <li><span class="sha">be8a3e6</span><span class="csub">Phase 1.3b: product UI — app shell and design system</span><span class="cdate">2026-10-09</span></li>
 <li><span class="sha">130089e</span><span class="csub">Phase 1.2 continued: the data layer and an idempotent Shopify import</span><span class="cdate">2026-10-09</span></li>

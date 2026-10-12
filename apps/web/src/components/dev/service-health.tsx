@@ -34,13 +34,13 @@ export function ServiceHealth() {
 
       {data && (
         <>
-          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mb-3 text-xs text-muted-foreground">
             API v{data.version} · env {data.env} · overall{" "}
             <span
               className={
                 data.status === "ok"
-                  ? "font-medium text-emerald-600 dark:text-emerald-400"
-                  : "font-medium text-rose-600 dark:text-rose-400"
+                  ? "font-medium text-positive"
+                  : "font-medium text-destructive"
               }
             >
               {data.status}
@@ -51,20 +51,20 @@ export function ServiceHealth() {
             {Object.entries(data.checks).map(([name, check]) => (
               <li
                 key={name}
-                className="rounded-lg border border-zinc-200 px-3 py-2.5 dark:border-zinc-800"
+                className="rounded-lg border border-border px-3 py-2.5"
               >
                 <div className="flex items-center gap-2">
                   <Dot status={check.status} />
                   <span className="font-mono text-sm font-medium">{name}</span>
-                  <span className="ml-auto text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                     {check.latency_ms} ms
                   </span>
                 </div>
-                <p className="mt-1 pl-[1.125rem] text-xs text-zinc-500 dark:text-zinc-400">
+                <p className="mt-1 pl-[1.125rem] text-xs text-muted-foreground">
                   {DESCRIPTIONS[name] ?? ""}
                 </p>
                 {check.detail && (
-                  <p className="mt-1 pl-[1.125rem] text-xs break-words text-rose-600 dark:text-rose-400">
+                  <p className="mt-1 pl-[1.125rem] text-xs break-words text-destructive">
                     {check.detail}
                   </p>
                 )}
@@ -75,7 +75,7 @@ export function ServiceHealth() {
       )}
 
       {!data && !error && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Checking…</p>
+        <p className="text-xs text-muted-foreground">Checking…</p>
       )}
     </Card>
   );

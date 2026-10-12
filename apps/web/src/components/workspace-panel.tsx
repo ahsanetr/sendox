@@ -103,7 +103,7 @@ export function WorkspacePanel() {
   if (!me) {
     return (
       <Card title="Workspaces">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs text-muted-foreground">
           Sign in to create and manage workspaces.
         </p>
       </Card>
@@ -134,16 +134,16 @@ export function WorkspacePanel() {
                     aria-pressed={selected}
                     className={`flex w-full flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-left transition ${
                       selected
-                        ? "border-zinc-900 dark:border-zinc-100"
-                        : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
+                        ? "border-primary"
+                        : "border-border hover:border-muted-foreground/40"
                     }`}
                   >
                     <span className="text-sm font-medium">{workspace.name}</span>
-                    <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="font-mono text-xs text-muted-foreground">
                       {workspace.slug}
                     </span>
                     <span className="ml-auto flex items-center gap-2">
-                      <span className="font-mono text-xs text-zinc-400 dark:text-zinc-500">
+                      <span className="font-mono text-xs text-muted-foreground/70">
                         {workspace.timezone}
                       </span>
                       <RoleBadge role={workspace.role} />
@@ -156,7 +156,7 @@ export function WorkspacePanel() {
         )}
 
         <form
-          className="mt-4 flex flex-wrap items-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+          className="mt-4 flex flex-wrap items-end gap-2 border-t border-border pt-4"
           onSubmit={(event) => {
             event.preventDefault();
             void run("create", async () => {
@@ -319,7 +319,7 @@ export function WorkspacePanel() {
           }
           action={<RoleBadge role={activeWorkspace.role} />}
         >
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-y divide-border">
             {members.map((member) => (
               <li key={member.user_id} className="flex flex-wrap items-center gap-2 py-2">
                 <span className="min-w-0 flex-1">
@@ -327,7 +327,7 @@ export function WorkspacePanel() {
                     {member.full_name ?? member.email ?? member.user_id}
                   </span>
                   {member.full_name && member.email && (
-                    <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="block truncate text-xs text-muted-foreground">
                       {member.email}
                     </span>
                   )}
@@ -348,7 +348,7 @@ export function WorkspacePanel() {
                         refresh();
                       })
                     }
-                    className="rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-xs dark:border-zinc-700"
+                    className="rounded-md border border-input bg-transparent px-2 py-1 text-xs"
                   >
                     {ASSIGNABLE.map((option) => (
                       <option key={option} value={option}>
@@ -381,7 +381,7 @@ export function WorkspacePanel() {
           {manage && (
             <>
               <form
-                className="mt-4 flex flex-wrap items-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+                className="mt-4 flex flex-wrap items-end gap-2 border-t border-border pt-4"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void run("invite", async () => {
@@ -414,7 +414,7 @@ export function WorkspacePanel() {
                     id="invite-role"
                     value={inviteRole}
                     onChange={(event) => setInviteRole(event.target.value as MemberRole)}
-                    className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                    className="rounded-md border border-input bg-transparent px-2 py-1.5 text-sm"
                   >
                     {ASSIGNABLE.map((option) => (
                       <option key={option} value={option}>
@@ -455,10 +455,10 @@ export function WorkspacePanel() {
 
               {invitations.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Pending invitations
                   </h3>
-                  <ul className="mt-1.5 divide-y divide-zinc-200 dark:divide-zinc-800">
+                  <ul className="mt-1.5 divide-y divide-border">
                     {invitations.map((invitation) => (
                       <li
                         key={invitation.id}
@@ -466,7 +466,7 @@ export function WorkspacePanel() {
                       >
                         <span className="min-w-0 flex-1 truncate">{invitation.email}</span>
                         <RoleBadge role={invitation.role} />
-                        <span className="font-mono text-xs text-zinc-400 dark:text-zinc-500">
+                        <span className="font-mono text-xs text-muted-foreground/70">
                           expires {new Date(invitation.expires_at).toLocaleDateString()}
                         </span>
                       </li>
@@ -485,22 +485,22 @@ export function WorkspacePanel() {
           subtitle="Every workspace change, scoped to this workspace alone"
         >
           {audit.length === 0 ? (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Nothing recorded yet.</p>
+            <p className="text-xs text-muted-foreground">Nothing recorded yet.</p>
           ) : (
-            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <ul className="divide-y divide-border">
               {audit.map((entry, index) => (
                 <li key={index} className="flex flex-wrap items-baseline gap-2 py-1.5">
-                  <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="font-mono text-xs text-muted-foreground">
                     {new Date(entry.at).toLocaleString()}
                   </span>
                   <span className="font-mono text-xs font-medium">{entry.action}</span>
                   {entry.target && (
-                    <span className="min-w-0 truncate text-xs text-zinc-600 dark:text-zinc-300">
+                    <span className="min-w-0 truncate text-xs text-muted-foreground">
                       {entry.target}
                     </span>
                   )}
                   {Object.keys(entry.meta).length > 0 && (
-                    <span className="font-mono text-xs text-zinc-400 dark:text-zinc-500">
+                    <span className="font-mono text-xs text-muted-foreground/70">
                       {JSON.stringify(entry.meta)}
                     </span>
                   )}

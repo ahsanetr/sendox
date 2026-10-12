@@ -1,5 +1,7 @@
 "use client";
 
+import { Workflow } from "lucide-react";
+
 import { PageHeader } from "@/components/app/page-header";
 import { EmptyState, Section } from "@/components/app/primitives";
 
@@ -10,8 +12,9 @@ export default function FlowsPage() {
         title="Flows"
         description="Sequences that run themselves when a customer does something."
       />
-      <Section title="Not built yet">
+      <Section>
         <EmptyState
+          icon={Workflow}
           headline="Flows arrive in a later release"
           body="Abandoned cart, welcome and post-purchase sequences are scheduled for the next release."
         />

@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 /** A row of figures.
@@ -33,7 +34,7 @@ export function Section({
   action,
   children,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
@@ -43,7 +44,9 @@ export function Section({
       {(title || description || action) && (
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-[0.9375rem] font-semibold tracking-tight">{title}</h2>
+            {title && (
+              <h2 className="text-[0.9375rem] font-semibold tracking-tight">{title}</h2>
+            )}
             {description && (
               <p className="mt-1 max-w-prose text-sm leading-relaxed text-muted-foreground">
                 {description}
@@ -58,23 +61,33 @@ export function Section({
   );
 }
 
-/** An empty screen is an invitation to act, so it always carries the action. */
+/** An empty screen is an invitation to act, so it always carries the action.
+ *
+ *  The icon is not decoration. A panel holding only two lines of grey text reads
+ *  as a page that failed to load; a glyph says the emptiness is the state, and
+ *  gives the eye something to land on before it reads.
+ */
 export function EmptyState({
+  icon: Icon,
   headline,
   body,
   action,
 }: {
+  icon: LucideIcon;
   headline: string;
   body: string;
   action?: ReactNode;
 }) {
   return (
-    <div className="panel px-8 py-14 text-center">
-      <p className="text-base font-medium tracking-tight">{headline}</p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+    <div className="panel flex flex-col items-center px-8 py-12 text-center">
+      <div className="flex size-11 items-center justify-center rounded-full bg-primary/8 ring-1 ring-inset ring-primary/12">
+        <Icon className="size-5 text-primary" aria-hidden strokeWidth={1.75} />
+      </div>
+      <p className="mt-4 text-sm font-semibold tracking-tight">{headline}</p>
+      <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
         {body}
       </p>
-      {action && <div className="mt-6 flex justify-center">{action}</div>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }
@@ -127,7 +140,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex shrink-0 items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]}`}
+      className={`inline-flex shrink-0 items-center justify-center cursor-pointer rounded-md px-3.5 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${styles[variant]}`}
     >
       {children}
     </button>

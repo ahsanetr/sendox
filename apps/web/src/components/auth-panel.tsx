@@ -67,7 +67,7 @@ export function AuthPanel() {
   if (loading) {
     return (
       <Card title="Account">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Checking your session…</p>
+        <p className="text-xs text-muted-foreground">Checking your session…</p>
       </Card>
     );
   }
@@ -94,7 +94,7 @@ export function AuthPanel() {
             ["Workspaces", String(me.workspaces.length)],
           ].map(([label, value]) => (
             <div key={label}>
-              <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
+              <dt className="text-muted-foreground">{label}</dt>
               <dd className="mt-0.5 font-medium">{value}</dd>
             </div>
           ))}

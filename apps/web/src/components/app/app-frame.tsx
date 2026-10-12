@@ -18,7 +18,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="grid min-h-full place-items-center">
+      <div className="grid min-h-screen place-items-center">
         <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
@@ -31,9 +31,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-full">
+    <div className="flex min-h-screen">
       <Sidebar />
-      <div className="min-w-0 flex-1 bg-canvas">{children}</div>
+      <main className="min-w-0 flex-1 bg-canvas">
+        <div className="measure pb-16">{children}</div>
+      </main>
     </div>
   );
 }

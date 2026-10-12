@@ -1,5 +1,6 @@
 "use client";
 
+import { Users } from "lucide-react";
 import Link from "next/link";
 
 import { getImportedData } from "@/lib/api";
@@ -26,6 +27,7 @@ export default function ContactsPage() {
       <Section title="Overview">
         {contacts.length === 0 ? (
           <EmptyState
+            icon={Users}
             headline="No contacts yet"
             body="Contacts arrive when you import your Shopify store."
             action={

@@ -10,18 +10,18 @@ function ItemRow({ item }: { item: StatusItem }) {
     <li
       className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 py-2 ${dimmed ? "opacity-60" : ""}`}
     >
-      <span className="w-10 shrink-0 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+      <span className="w-10 shrink-0 font-mono text-xs text-muted-foreground">
         {item.id}
       </span>
       <span className="min-w-0 flex-1 text-sm">{item.name}</span>
       {item.phase && (
-        <span className="font-mono text-xs text-zinc-400 dark:text-zinc-500">
+        <span className="font-mono text-xs text-muted-foreground/70">
           {item.phase}
         </span>
       )}
       <Badge status={item.status} />
       {item.note && (
-        <p className="w-full pl-10 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="w-full pl-10 text-xs text-muted-foreground">
           {item.note}
         </p>
       )}
@@ -43,7 +43,7 @@ export function BuildStatusPanel() {
   if (!data) {
     return (
       <Card title="Build status">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-xs text-muted-foreground">Loading…</p>
       </Card>
     );
   }
@@ -57,17 +57,17 @@ export function BuildStatusPanel() {
       title="Build status"
       subtitle={`${done} done · ${partial} partial · ${total - done - partial} planned, across ${total} items`}
     >
-      <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+      <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full bg-emerald-500"
+          className="h-full bg-positive"
           style={{ width: `${(done / total) * 100}%` }}
         />
       </div>
 
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         R0 — Foundation
       </h3>
-      <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+      <ul className="divide-y divide-border">
         {data.foundation.map((item) => (
           <ItemRow key={item.id} item={item} />
         ))}
@@ -80,13 +80,13 @@ export function BuildStatusPanel() {
           if (items.length === 0) return null;
           return (
             <div key={release.id} className="mt-6">
-              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {release.id} — {release.title}
-                <span className="ml-2 font-normal normal-case text-zinc-400 dark:text-zinc-500">
+                <span className="ml-2 font-normal normal-case text-muted-foreground/70">
                   {release.window}
                 </span>
               </h3>
-              <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <ul className="divide-y divide-border">
                 {items.map((item) => (
                   <ItemRow key={item.id} item={item} />
                 ))}
@@ -95,7 +95,7 @@ export function BuildStatusPanel() {
           );
         })}
 
-      <p className="mt-5 border-t border-zinc-200 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+      <p className="mt-5 border-t border-border pt-3 text-xs text-muted-foreground dark:text-muted-foreground/70">
         {data.note}
       </p>
     </Card>

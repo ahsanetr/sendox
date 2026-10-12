@@ -1,13 +1,23 @@
 import type { ItemStatus, ProbeStatus } from "@/lib/api";
 
+/* These started as throwaway chrome for the /dev page and drifted into Settings
+ * and Brand, carrying a hardcoded zinc/sky/rose palette with them. That made
+ * two design systems in one app: the token-driven one in components/app, and
+ * this. Everything here now reads the same custom properties as the rest, so a
+ * change of colour scheme reaches the whole product rather than half of it.
+ *
+ * Role and status colours are the one place raw hues survive, because they are
+ * a legend — four roles the eye has to tell apart at a glance — rather than
+ * brand colour. They are pinned to the chart ramp, which every scheme defines.
+ */
+
 const STATUS_STYLE: Record<ItemStatus | ProbeStatus, string> = {
-  done: "bg-emerald-500/10 text-emerald-700 ring-emerald-600/20 dark:text-emerald-400",
-  ok: "bg-emerald-500/10 text-emerald-700 ring-emerald-600/20 dark:text-emerald-400",
-  partial: "bg-amber-500/10 text-amber-700 ring-amber-600/20 dark:text-amber-400",
-  in_progress:
-    "bg-sky-500/10 text-sky-700 ring-sky-600/20 dark:text-sky-400",
-  planned: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-400",
-  error: "bg-rose-500/10 text-rose-700 ring-rose-600/20 dark:text-rose-400",
+  done: "bg-positive/10 text-positive ring-positive/20",
+  ok: "bg-positive/10 text-positive ring-positive/20",
+  partial: "bg-attention/10 text-attention ring-attention/20",
+  in_progress: "bg-primary/10 text-primary ring-primary/20",
+  planned: "bg-muted text-muted-foreground ring-border",
+  error: "bg-destructive/10 text-destructive ring-destructive/20",
 };
 
 const STATUS_LABEL: Record<ItemStatus | ProbeStatus, string> = {
@@ -30,7 +40,7 @@ export function Badge({ status }: { status: ItemStatus | ProbeStatus }) {
 }
 
 export function Dot({ status }: { status: ProbeStatus }) {
-  const color = status === "ok" ? "bg-emerald-500" : "bg-rose-500";
+  const color = status === "ok" ? "bg-positive" : "bg-destructive";
   return (
     <span className="relative flex h-2.5 w-2.5 shrink-0">
       {status === "ok" && (
@@ -55,19 +65,17 @@ export function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white/60 dark:border-zinc-800 dark:bg-zinc-900/40">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+    <section className="panel">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div>
           <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
           {subtitle && (
-            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-              {subtitle}
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
           )}
         </div>
         {action}
       </header>
-      <div className="p-4">{children}</div>
+      <div className="p-5">{children}</div>
     </section>
   );
 }
@@ -86,7 +94,7 @@ export function Button({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+      className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-200 hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>
@@ -104,30 +112,33 @@ export function Field({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       {children}
-      {hint && <span className="text-xs text-zinc-500 dark:text-zinc-400">{hint}</span>}
+      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
     </label>
   );
 }
 
 export const inputClass =
-  "w-full rounded-md border border-zinc-300 bg-transparent px-2.5 py-1.5 text-sm outline-none transition focus:border-zinc-500 disabled:opacity-50 dark:border-zinc-700";
+  "w-full rounded-md border border-input bg-card px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors duration-200 placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:opacity-50";
 
 export function Note({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-md bg-sky-500/10 px-3 py-2 text-xs text-sky-800 ring-1 ring-inset ring-sky-600/20 dark:text-sky-300">
+    <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-primary ring-1 ring-inset ring-primary/20">
       {children}
     </p>
   );
 }
 
 export function RoleBadge({ role }: { role: string }) {
+  // A legend, not brand colour: four roles that have to be distinguishable at a
+  // glance, so they ride the chart ramp each scheme defines rather than fixed
+  // hues that would clash with half of them.
   const tone: Record<string, string> = {
-    owner: "bg-violet-500/10 text-violet-700 ring-violet-600/20 dark:text-violet-300",
-    admin: "bg-sky-500/10 text-sky-700 ring-sky-600/20 dark:text-sky-300",
-    editor: "bg-teal-500/10 text-teal-700 ring-teal-600/20 dark:text-teal-300",
-    viewer: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-400",
+    owner: "bg-chart-5/12 text-chart-5 ring-chart-5/25",
+    admin: "bg-chart-1/12 text-chart-1 ring-chart-1/25",
+    editor: "bg-chart-2/12 text-chart-2 ring-chart-2/25",
+    viewer: "bg-muted text-muted-foreground ring-border",
   };
   return (
     <span
@@ -140,7 +151,7 @@ export function RoleBadge({ role }: { role: string }) {
 
 export function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-md bg-rose-500/10 px-3 py-2 text-xs text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:text-rose-400">
+    <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive ring-1 ring-inset ring-destructive/20">
       {children}
     </p>
   );

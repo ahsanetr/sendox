@@ -26,7 +26,7 @@ function Row({
     <div className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
       <div className="min-w-0">
         <p className="text-sm font-medium">{label}</p>
-        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
       </div>
       <div className="flex min-w-0 shrink-0 items-center gap-3">{children}</div>
     </div>
@@ -87,7 +87,7 @@ export function CapabilityChecks() {
     >
       {error && <ErrorNote>{error}</ErrorNote>}
 
-      <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+      <div className="divide-y divide-border">
         <Row
           label="Queue round-trip"
           hint="API enqueues sendox.ping → Redis → Celery worker executes → result read back"
@@ -98,7 +98,7 @@ export function CapabilityChecks() {
         </Row>
 
         {queueLog.length > 0 && (
-          <ul className="space-y-1 py-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">
+          <ul className="space-y-1 py-3 font-mono text-xs text-muted-foreground">
             {queueLog.map((line, index) => (
               <li key={index}>→ {line}</li>
             ))}
@@ -116,13 +116,13 @@ export function CapabilityChecks() {
 
         {render && (
           <div className="py-3">
-            <p className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="font-mono text-xs text-muted-foreground">
               → {render.html_bytes.toLocaleString()} bytes ·{" "}
               {render.responsive ? "responsive (@media present)" : "no media queries"} ·{" "}
               {render.ok ? "no errors" : `${render.errors.length} error(s)`}
             </p>
             {!render.ok && (
-              <ul className="mt-1 space-y-0.5 text-xs text-rose-600 dark:text-rose-400">
+              <ul className="mt-1 space-y-0.5 text-xs text-destructive">
                 {render.errors.map((mjmlError, index) => (
                   <li key={index}>
                     line {mjmlError.line} · {mjmlError.message}
@@ -134,7 +134,7 @@ export function CapabilityChecks() {
               title="Rendered email preview"
               srcDoc={render.html}
               sandbox=""
-              className="mt-3 h-80 w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800"
+              className="mt-3 h-80 w-full rounded-lg border border-border bg-white"
             />
           </div>
         )}

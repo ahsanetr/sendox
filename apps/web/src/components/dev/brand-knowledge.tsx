@@ -58,7 +58,7 @@ export function BrandKnowledge() {
             ["Model", stats.embedding_model.replace(" (ONNX, local)", "")],
           ].map(([label, value]) => (
             <div key={label}>
-              <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
+              <dt className="text-muted-foreground">{label}</dt>
               <dd className="font-mono">{value}</dd>
             </div>
           ))}
@@ -88,7 +88,7 @@ export function BrandKnowledge() {
       <div className="mt-4">
         <label
           htmlFor="vector-query"
-          className="block text-xs text-zinc-500 dark:text-zinc-400"
+          className="block text-xs text-muted-foreground"
         >
           Semantic search — try wording that shares no words with the source text
         </label>
@@ -97,7 +97,7 @@ export function BrandKnowledge() {
             id="vector-query"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+            className="min-w-0 flex-1 rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-ring"
             placeholder="ask something"
           />
           <Button
@@ -119,7 +119,7 @@ export function BrandKnowledge() {
               key={example}
               type="button"
               onClick={() => setQuery(example)}
-              className="rounded-full border border-zinc-300 px-2 py-0.5 text-xs text-zinc-600 transition hover:border-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+              className="rounded-full border border-input px-2 py-0.5 text-xs text-muted-foreground transition hover:border-muted-foreground/40 dark:text-muted-foreground/70"
             >
               {example}
             </button>
@@ -130,34 +130,34 @@ export function BrandKnowledge() {
       {matches && (
         <ul className="mt-4 space-y-2">
           {matches.length === 0 && (
-            <li className="text-xs text-zinc-500 dark:text-zinc-400">
+            <li className="text-xs text-muted-foreground">
               No matches — seed the knowledge base first.
             </li>
           )}
           {matches.map((match) => (
             <li
               key={match.id}
-              className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+              className="rounded-lg border border-border px-3 py-2"
             >
               <div className="flex items-center gap-2 text-xs">
-                <span className="font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                <span className="font-mono tabular-nums text-positive">
                   {match.similarity.toFixed(3)}
                 </span>
-                <span className="text-zinc-500 dark:text-zinc-400">
+                <span className="text-muted-foreground">
                   {match.content_type ?? "unknown"}
                 </span>
-                <span className="ml-auto font-mono text-zinc-400 dark:text-zinc-500">
+                <span className="ml-auto font-mono text-muted-foreground/70">
                   {match.id}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">{match.text}</p>
+              <p className="mt-1 text-sm text-foreground">{match.text}</p>
             </li>
           ))}
         </ul>
       )}
 
       {!seeded && (
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-3 text-xs text-muted-foreground">
           Nothing embedded yet. Seeding writes five sample chunks (about page, brand
           voice, two products, FAQ) standing in for what the storefront crawler will
           extract in phase 1.4.

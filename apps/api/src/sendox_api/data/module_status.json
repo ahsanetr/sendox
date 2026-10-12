@@ -75,7 +75,7 @@
       "name": "Product UI foundation \u2014 app shell and design system",
       "release": "R1",
       "status": "done",
-      "note": "Dark navigation rail, light canvas, warm neutrals with a cobalt accent, Archivo type. shadcn/ui initialised. Home leads with what needs approval rather than metrics. Dev dashboard moved to /dev"
+      "note": "Dark navigation rail with lucide icons, light canvas, Geist type. Colour, spacing and radius come from a generated design system (ui-ux-pro-max, Minimalism & Swiss) persisted at design-system/sendox/MASTER.md, and five switchable schemes ship with it. Every component reads tokens \u2014 no hardcoded palette classes remain. Home leads with what needs approval rather than metrics"
     }
   ],
   "modules": [

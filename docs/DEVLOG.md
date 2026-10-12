@@ -656,6 +656,95 @@ This is **test infrastructure, not seeded product data**. It makes the crawler's
 in CI without depending on one development store's contents — and it gives the AI agents something
 with real voice to be judged against, which Shopify's demo products cannot do.
 
+## The redesign, and the bug hiding underneath it · 12 Oct 2026
+
+The brief was blunt: the UI still looked like a 2005 SaaS, and the earlier "deliberate choices" were
+overruled. Six steps were asked for, and one of them found a bug that had been there for days.
+
+### The font was never loading
+
+The previous entry claims a type system. It did not exist on screen. `shadcn init` had appended
+`--font-sans: var(--font-sans)` to `globals.css` *after* the line that defined it, which is a
+circular reference; CSS discards the whole declaration and falls back to the browser default, which
+is Times New Roman. Every screenshot in this project up to today was set in a serif.
+
+What is worth recording is **how it went unnoticed**. The check made at the time was "are the font
+files being requested?" — they were, so the font was declared working. That check cannot fail in a
+way that reveals this bug: the files load fine, the `font-family` that would use them is invalid.
+The only check that catches it is reading `getComputedStyle(document.body).fontFamily` out of a real
+browser, which is now what `apps/web/scripts/shoot.mjs` does on every run, alongside measuring
+whether the navigation rail actually reaches the bottom of the viewport. Verifying a proxy for the
+thing is not verifying the thing.
+
+### Where the tokens come from now
+
+Colour is generated rather than chosen: `ui-ux-pro-max` with `--design-system --persist`, saved to
+`design-system/sendox/MASTER.md`. The first query, phrased broadly, returned Glassmorphism with a
+"Hero + Features + CTA" structure and an orange call to action — a landing-page answer to a
+dashboard question. A narrower query returned **Minimalism & Swiss Style**, which the tool's own
+notes describe as suited to enterprise apps and dashboards. The second answer was taken, and the
+first was recorded as a mismatch rather than quietly dropped.
+
+One instruction overrode the tool: it recommended Plus Jakarta Sans, and the typeface was specified
+as Inter or Geist. Geist was used. A design system is advice, not an authority.
+
+### Two design systems in one app
+
+The more serious finding came from looking at the Settings screenshot rather than at the diff. Its
+buttons were black, not the palette's blue — because `components/dev-ui.tsx` had quietly become a
+second design system. It was written as throwaway chrome for the `/dev` page, drifted into Settings
+and Brand, and carried a hardcoded `zinc`/`sky`/`rose`/`violet` palette with it. Roughly 140 colour
+classes across nine files answered to nothing.
+
+That is a design problem and a correctness problem at once: a colour scheme that only reaches half
+the product is not a colour scheme. Every one of those classes now reads a token.
+
+### Colour schemes you can try on
+
+Rather than argue about a palette in the abstract, the rail carries a palette icon that switches
+between five complete schemes — Swiss Blue (the generated default), Graphite, Indigo, Teal and
+Midnight. The four alternatives come from `ui-ux-pro-max --domain color`, not from taste, with two
+documented departures: primaries stepped darker where white text fell below 4.5:1, and the dark
+rail's active tint lightened because the source row chose its accent against white.
+
+The mechanism is deliberately small. The scheme lives in one attribute on `<html>`; the CSS reads
+it; React reads that attribute through `useSyncExternalStore` instead of keeping its own copy, so
+there is no second source of truth to drift. An inline script in the document head applies the
+remembered choice before first paint, so the page never flashes the default on its way to yours.
+
+### What the screenshots found that the build did not
+
+Three bugs survived a clean `pnpm build` and were only visible in a picture:
+
+- The scheme menu was **clipped at the rail's edge**, because `overflow-y-auto` on the rail made it
+  a clipping context. The scroll moved to the navigation list, which is the part that can actually
+  grow; the rail itself now lets its popovers escape.
+- Three colour squares in a rounded pill **read as an iOS toggle switch** — a different control with
+  a different meaning. They are now three discs.
+- Next's development badge sits in the bottom-left corner, which is exactly where the rail keeps the
+  account row and the new picker. It was not merely ugly: it **swallowed the clicks**, which is how
+  it was found — Playwright reported `<nextjs-portal> intercepts pointer events`.
+
+### A dev-only error that covered the whole app
+
+Chasing that click failure surfaced something worse. Every route was logging *"Could not validate
+that a segment in your UI has instant navigation"*, and the resulting error overlay covered the
+page. `cacheComponents` and `partialPrefetching` exist to prerender a static shell per route, and
+nothing here has one: every page is a `"use client"` module whose content arrives from a polled API
+call behind a session cookie, so each segment was dropped from the render.
+
+The documented per-segment escape, `export const instant = false`, was tried and rejected by Next
+itself — it is a server-only route config and refuses to live in a client module. So both flags are
+off, with the reasoning written into `next.config.ts` next to them, and the real fix named: give the
+pages server-rendered shells worth prefetching.
+
+### Two of the six requested tools do not exist
+
+The brief named six skills. Only `ui-ux-pro-max` and `frontend-design` are installed;
+`taste-skill`, `minimalist-skill`, `redesign-skill` and `impeccable` are not. The audit and critique
+steps were therefore done by hand and by reading screenshots, and are reported as such. Claiming a
+tool ran when it did not would make every other claim in this log worth less.
+
 ## Known environment problems
 
 - **Disk pressure.** The Mac ran down to 1.2 GB free of 228 GB, which forced Docker's filesystem

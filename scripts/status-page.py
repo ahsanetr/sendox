@@ -114,6 +114,49 @@ for raw in verify_raw.splitlines():
         lines.append(f'<span class="vgroup">{html.escape(raw)}</span>')
 transcript = "\n".join(lines)
 
+
+# ---- where the project stands ----------------------------------------------
+# Derived from the manifest, never hand-written. The previous version of this
+# page was hand-written and went stale: it told the supervisor there was no
+# authentication yet, directly above a transcript showing eleven passing
+# authentication checks. Anything a human types twice eventually disagrees.
+
+def first_sentence(note: str) -> str:
+    """The first sentence, without cutting "0.4" in half.
+
+    Splitting on "." alone turned "Landed early with 0.4: ..." into "Landed
+    early with 0". A sentence here ends with a period that follows a letter or
+    a closing bracket and is followed by whitespace; a decimal point never is.
+    """
+    first = re.split(r"(?<=[a-zA-Z\)])\.\s", note.strip(), maxsplit=1)[0].rstrip(".")
+    return first if len(first) <= 190 else first[:187].rsplit(" ", 1)[0] + "…"
+
+
+def standing(status_set, limit):
+    """Modules in the given states, most-complete first, as a one-line summary."""
+    picked = [
+        m for m in sorted(mods, key=lambda m: m["id"])
+        if m["status"] in status_set
+    ]
+    out = []
+    for m in picked[:limit]:
+        note = first_sentence(m.get("note", ""))
+        out.append(
+            f'<li><b>{html.escape(m["name"])}.</b> '
+            f'{html.escape(note) if note else "Not started."}</li>'
+        )
+    return "\n          ".join(out)
+
+shipped = [m for m in mods if m["status"] == "done"]
+started = [m for m in mods if m["status"] == "partial"]
+untouched = [m for m in mods if m["status"] == "planned"]
+
+working_rows = "\n          ".join(
+    f'<li><b>{html.escape(f["name"])}.</b> {html.escape(first_sentence(f.get("note", "")))}</li>'
+    for f in foundation if f["status"] == "done"
+) + "\n          " + standing({"done"}, 4)
+gap_rows = standing({"partial"}, 3) + "\n          " + standing({"planned"}, 5)
+
 def chip(status):
     label = {"done": "done", "partial": "partial", "planned": "planned"}[status]
     return f'<span class="chip {status}">{label}</span>'
@@ -482,24 +525,15 @@ HTML = f"""<title>Sendox Build Status</title>
     <h2>Where the project stands</h2>
     <div class="two">
       <div>
-        <h3>Working <span class="eyebrow">verified</span></h3>
+        <h3>Done <span class="eyebrow">{len(shipped) + sum(1 for f in foundation if f["status"] == "done")} items</span></h3>
         <ul class="yes">
-          <li><b>Infrastructure.</b> Eight-service stack (API, workers, Postgres, Redis, vector database, email renderer, mail capture) booting from one command, with CI.</li>
-          <li><b>Workspace data isolation.</b> Enforced inside Postgres: a query that forgets to filter by workspace returns nothing rather than another brand's data.</li>
-          <li><b>Brand knowledge retrieval.</b> Content is embedded locally and searched by meaning — asking "can I send something back?" returns the returns policy, which shares none of those words.</li>
-          <li><b>Email rendering.</b> Produces responsive HTML that holds up across mail clients; invalid input is reported with line numbers rather than crashing.</li>
-          <li><b>Background job queue.</b> Proven end to end, which is what makes timed automation possible later.</li>
+          {working_rows}
         </ul>
       </div>
       <div>
-        <h3>Not built yet <span class="eyebrow">23 modules</span></h3>
+        <h3>Started or not begun <span class="eyebrow">{len(started)} partial, {len(untouched)} planned</span></h3>
         <ul class="no">
-          <li><b>Accounts and login.</b> No authentication yet — next piece of work.</li>
-          <li><b>Shopify connection.</b> Blocked on partner app credentials.</li>
-          <li><b>The AI agents.</b> Strategy, copywriting, design and optimisation — transport is ready, no generation yet.</li>
-          <li><b>Campaigns, flows, sending and tracking.</b> Nothing is delivered to a real inbox yet.</li>
-          <li><b>SMS and WhatsApp.</b> Scheduled for March–April 2027; sender registration must start months earlier.</li>
-          <li><b>Billing, signup forms, analytics.</b> Final release.</li>
+          {gap_rows}
         </ul>
       </div>
     </div>

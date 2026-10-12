@@ -1,5 +1,6 @@
 "use client";
 
+import { Building2, CheckCheck, DownloadCloud, Store } from "lucide-react";
 import Link from "next/link";
 
 import { getImportedData, getShopifyStatus } from "@/lib/api";
@@ -24,14 +25,15 @@ export default function HomePage() {
 
 function NoWorkspace() {
   return (
-    <Section title="No workspace yet">
+    <Section>
       <EmptyState
+        icon={Building2}
         headline="Create a workspace to begin"
         body="A workspace holds one brand: its store, its contacts, and everything Sendox writes for it."
         action={
           <Link href="/settings">
-                <Button>Create a workspace</Button>
-              </Link>
+            <Button>Create a workspace</Button>
+          </Link>
         }
       />
     </Section>
@@ -55,6 +57,7 @@ function Overview({ workspaceId }: { workspaceId: string }) {
       >
         {connected.length === 0 ? (
           <EmptyState
+            icon={Store}
             headline="Connect your Shopify store"
             body="Sendox reads your products, customers and order history to learn how your brand sells before it writes anything."
             action={
@@ -65,6 +68,7 @@ function Overview({ workspaceId }: { workspaceId: string }) {
           />
         ) : counts && counts.contacts === 0 ? (
           <EmptyState
+            icon={DownloadCloud}
             headline="Import your store data"
             body="Your store is connected. Bring in customers, orders and products so Sendox has something to work from."
             action={
@@ -75,6 +79,7 @@ function Overview({ workspaceId }: { workspaceId: string }) {
           />
         ) : (
           <EmptyState
+            icon={CheckCheck}
             headline="Nothing needs you right now"
             body="Campaign planning arrives in a later release. When Sendox drafts something, it will appear here for approval before anything is sent."
           />

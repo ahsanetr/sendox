@@ -34,12 +34,12 @@ export function AiStatus() {
 
       {data && (
         <>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             model <span className="font-mono">{data.model}</span> ·{" "}
             {data.configured ? "API key present" : "no API key"}
           </p>
           {data.hint && (
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">{data.hint}</p>
+            <p className="mt-2 text-xs text-attention">{data.hint}</p>
           )}
           <div className="mt-3">
             <Button onClick={() => void runPing()} disabled={busy || !data.configured}>
@@ -56,7 +56,7 @@ export function AiStatus() {
       )}
 
       {ping && (
-        <p className="mt-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="mt-3 font-mono text-xs text-muted-foreground">
           → &quot;{ping.text}&quot; · {ping.model} · {ping.input_tokens} in /{" "}
           {ping.output_tokens} out
         </p>

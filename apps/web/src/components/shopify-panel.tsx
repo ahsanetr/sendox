@@ -1,5 +1,7 @@
 "use client";
 
+import { FolderOpen } from "lucide-react";
+
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -65,6 +67,7 @@ export function ShopifyPanel() {
   if (!activeWorkspace) {
     return (
       <EmptyState
+        icon={FolderOpen}
         headline="Select a workspace"
         body="A store connects to one workspace. Choose one from the switcher above."
       />
@@ -165,7 +168,7 @@ export function ShopifyPanel() {
       )}
 
       <form
-        className="flex flex-wrap items-end gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+        className="flex flex-wrap items-end gap-2 border-t border-border pt-4"
         onSubmit={(event) => {
           event.preventDefault();
           void connect();
@@ -195,7 +198,7 @@ export function ShopifyPanel() {
       )}
 
       {data && data.counts.contacts + data.counts.products > 0 && (
-        <div className="mt-5 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+        <div className="mt-5 border-t border-border pt-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Imported from Shopify
           </h3>
