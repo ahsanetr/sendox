@@ -401,3 +401,74 @@ export const syncShopifyStore = (workspaceId: string, storeId: string) =>
 
 export const getImportedData = (workspaceId: string) =>
   request<ImportedData>(`/workspaces/${workspaceId}/shopify/data`);
+
+
+// ---------------------------------------------------------------- Brand (M6)
+
+export type BrandTone = "warm" | "playful" | "direct" | "luxury" | "technical";
+
+export type BrandProfile = {
+  started: boolean;
+  complete: boolean;
+  what_you_sell: string | null;
+  audience: string | null;
+  tone: BrandTone | null;
+  never_say: string | null;
+  voice_notes: string | null;
+  logo_url: string | null;
+  brand_colors: string[];
+  completed_at: string | null;
+};
+
+/** Every field optional: the wizard saves one step at a time, and a field left
+ *  out must be left alone rather than cleared. */
+export type BrandProfilePatch = Partial<
+  Pick<
+    BrandProfile,
+    "what_you_sell" | "audience" | "tone" | "never_say" | "voice_notes" | "logo_url"
+  >
+> & { brand_colors?: string[] };
+
+export type BrandPage = {
+  id: string;
+  url: string;
+  title: string;
+  kind: string;
+  word_count: number;
+  images: string[];
+  included: boolean;
+  preview: string;
+  crawled_at: string;
+};
+
+export type BrandPages = {
+  pages: BrandPage[];
+  counts: { pages: number; included: number; words: number; images: number };
+};
+
+export const getBrandProfile = (workspaceId: string) =>
+  request<BrandProfile>(`/workspaces/${workspaceId}/brand/profile`);
+
+export const saveBrandProfile = (workspaceId: string, patch: BrandProfilePatch) =>
+  request<{ complete: boolean; completed_at: string | null }>(
+    `/workspaces/${workspaceId}/brand/profile`,
+    { method: "PUT", body: JSON.stringify(patch) },
+  );
+
+export const getBrandPages = (workspaceId: string) =>
+  request<BrandPages>(`/workspaces/${workspaceId}/brand/pages`);
+
+export const getBrandPage = (workspaceId: string, pageId: string) =>
+  request<BrandPage & { text: string }>(
+    `/workspaces/${workspaceId}/brand/pages/${pageId}`,
+  );
+
+export const setBrandPageExcluded = (
+  workspaceId: string,
+  pageId: string,
+  excluded: boolean,
+) =>
+  request<{ id: string; included: boolean; reindex_required: boolean }>(
+    `/workspaces/${workspaceId}/brand/pages/${pageId}/exclusion`,
+    { method: "POST", body: JSON.stringify({ excluded }) },
+  );

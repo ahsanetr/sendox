@@ -123,7 +123,7 @@
       "release": "R1",
       "phase": "1.4",
       "status": "partial",
-      "note": "Storefront crawler: sitemap discovery, robots.txt, 1 req/sec, boilerplate removal by cross-page repetition. Onboarding wizard, brand asset upload and S3 not started"
+      "note": "Five-question onboarding wizard saving one step at a time; storefront crawler with sitemap discovery, robots.txt, 1 req/sec and boilerplate removal by cross-page repetition; image extraction through lazy-load and srcset markup; extracted pages persisted and inspectable in full, with per-page include/exclude that survives a re-crawl. Logo is guessed from the home page and never overwrites a correction. Asset upload to object storage and brand colour extraction not started"
     },
     {
       "id": "M7",
@@ -131,7 +131,7 @@
       "release": "R1",
       "phase": "1.5",
       "status": "partial",
-      "note": "Vector store, local embeddings, semantic search, and paragraph-aware chunking of crawled pages with stable ids so re-crawls overwrite. Brand-profile schema, versioning and inspector UI not started"
+      "note": "Vector store, local embeddings, semantic search, and paragraph-aware chunking of crawled pages with stable ids so re-crawls overwrite. Brand-profile schema now exists (M6); knowledge-base versioning and the chunk-level inspector not started"
     },
     {
       "id": "M8",

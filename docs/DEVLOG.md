@@ -745,6 +745,87 @@ The brief named six skills. Only `ui-ux-pro-max` and `frontend-design` are insta
 steps were therefore done by hand and by reading screenshots, and are reported as such. Claiming a
 tool ran when it did not would make every other claim in this log worth less.
 
+## Phase 1.4 (M6): asking the brand, and showing it what we read · 12 Oct 2026
+
+The crawler has worked for days. What did not exist was any way to see what it had taken.
+
+### The half that was missing
+
+Crawled pages went straight into the vector store as embeddings. The only window onto what the AI
+had learned was `/shopify/knowledge`, which runs a similarity search and returns 400-character
+fragments. That is a reasonable thing to have, and it is the wrong instrument for the job the exit
+criterion describes: a search can only return pages it has already judged relevant, so it can never
+surface the page that should **not** have been learned from. The failure mode it hides is exactly
+the one that matters — a theme's demo copy, a half-finished draft, a supplier's boilerplate sitting
+in the knowledge base looking like brand voice.
+
+So pages now land in Postgres before anything is embedded, and `/brand/pages` lists all of them with
+word counts, images and the full extracted text. The text shown is what the chunker sees: furniture
+already stripped, no markup. If it reads wrong on screen, the knowledge base is wrong.
+
+### Excluding is not deleting
+
+A merchant can mark a page as unrepresentative. Three decisions sit inside that one button:
+
+- The row stays visible and dimmed rather than disappearing, because a decision you cannot see is a
+  decision you cannot reverse.
+- The exclusion survives the next crawl. `record_pages` updates rows in place rather than deleting
+  and reinserting, so the merchant's judgement outlives the next time the site changes.
+- The response says `reindex_required: true` and the UI says so in plain words. Nothing already
+  embedded is forgotten until a re-index, because un-embedding is not something the vector store can
+  do halfway, and claiming otherwise would be a lie the merchant could not check.
+
+### Two kinds of knowledge, two tables
+
+`brand_profiles` is what the merchant said: five questions, short and authoritative. `brand_pages`
+is what we read: long, noisy, provisional. They are separate tables because they fail differently
+and because precedence matters — when the storefront and the owner disagree about who the audience
+is, the owner wins.
+
+Tone is a closed list rather than free text, because it is fed to a prompt and "warm" and "friendly
+but not casual" produce different copy from the same intent. The nuance goes in a free-text field
+next to it, where it is read as guidance rather than as a switch. Each tone is shown with a sample
+sentence, because the adjective alone does not tell a merchant which one writes the emails they
+want.
+
+### The bug the screenshots found
+
+The wizard saves one step at a time, so a partial payload is the normal case: an absent field means
+"not in this request", an empty string means "clear it". That part was tested and worked.
+
+What was not caught until Playwright walked all five steps: answering the three **required**
+questions flipped the panel to the completion summary, and questions four and five were never asked.
+`is_complete` describes what the generator needs, not whether the merchant has finished the
+walk-through, and the component had conflated the two. The test suite could not see it because the
+API was behaving correctly the whole time.
+
+### Images, and why theme markup makes that hard
+
+The crawler now extracts images. Shopify themes defeat the naive version in four ways, and the
+fixture storefront grew one of each: a protocol-relative logo (`//cdn.shopify.com/...`), a
+lazy-loaded hero whose `src` is a base64 placeholder and whose real image is in `data-src`, the same
+photograph listed twice at different widths, and a tracking pixel. Dedupe is by path rather than URL
+because the width lives in the query string.
+
+The logo is guessed from the home page's first image. It is wrong perhaps a third of the time, which
+is why it is only written when the field is empty: a merchant who corrects it must not have that
+undone by the next crawl. A guess you can correct is a much easier thing to ask for than a blank
+field you must fill.
+
+### Using the design skills, and one that declined
+
+`taste-skill`, `minimalist-skill` and `redesign-skill` turned out to have been downloaded already,
+sitting in `.agents/skills/` where Claude Code does not look. Moving them to `.claude/skills/` made
+them real. `impeccable` is not installed and is not in any marketplace that could be checked, so it
+stays missing rather than being replaced by a guess at a repository name.
+
+Invoking the taste skill on this screen produced the most useful possible answer: its own scope
+section rules out dashboards, dense product UI and multi-step wizards, which is exactly what this
+is. So its aesthetic direction was not applied. What was taken from it: labels above inputs rather
+than placeholder-as-label, helper text in the markup, errors beside the control rather than at the
+top of a page already scrolled past, a loading skeleton shaped like the thing it is loading, and a
+contrast check on every button.
+
 ## Known environment problems
 
 - **Disk pressure.** The Mac ran down to 1.2 GB free of 228 GB, which forced Docker's filesystem
