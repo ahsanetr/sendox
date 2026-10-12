@@ -17,6 +17,7 @@ import socketserver
 import threading
 from collections.abc import Iterator
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -31,7 +32,7 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
 
     # Shopify-shaped URLs mapped onto flat fixture files, so the crawler sees
     # the paths it will see in production and classification is exercised.
-    ROUTES = {
+    ROUTES: ClassVar[dict[str, str]] = {
         "/": "index.html",
         "/pages/about": "pages-about.html",
         "/pages/shipping-and-returns": "pages-faq.html",
@@ -159,3 +160,38 @@ def test_the_fixture_looks_like_a_real_shopify_page() -> None:
     assert "cart-drawer" in home
     assert "announcement-bar" in home
     assert re.search(r"<nav>.*</nav>", home, re.S)
+
+
+async def test_images_are_extracted_without_duplicates_or_placeholders(crawled) -> None:  # type: ignore[no-untyped-def]
+    """Theme markup is hostile to naive image extraction, in four specific ways.
+
+    The fixture's home page carries one of each: a protocol-relative logo, a
+    lazy-loaded hero whose `src` is an inline placeholder, the same photograph
+    twice at different widths, and a tracking pixel.
+    """
+    home = next(page for page in crawled.pages if page.kind == "home")
+
+    assert any(url.endswith("logo.png?v=1700000000") for url in home.images)
+    # The real hero, taken from data-src rather than the base64 placeholder.
+    assert any("hero-ridgeline.jpg" in url for url in home.images)
+    assert not any(url.startswith("data:") for url in home.images)
+    # The largest srcset entry wins, and the second, smaller copy of the same
+    # photograph is not listed again.
+    assert sum(1 for url in home.images if "lookbook.jpg" in url) == 1
+    assert any("lookbook.jpg?width=1200" in url for url in home.images)
+    assert not any("tracking-pixel" in url for url in home.images)
+
+
+async def test_the_logo_guess_prefers_the_home_page(crawled) -> None:  # type: ignore[no-untyped-def]
+    """A guess, but a defensible one: the first image on the home page."""
+    from sendox_api.services.brand_profile import guess_assets
+
+    assert (guess_assets(crawled.pages) or "").endswith("logo.png?v=1700000000")
+
+
+async def test_pages_without_images_report_none(crawled) -> None:  # type: ignore[no-untyped-def]
+    """Absence must be an empty tuple, not a crash or a borrowed list."""
+    bare = [page for page in crawled.pages if not page.images]
+
+    assert bare, "the fixture should still contain pages with no imagery"
+    assert all(page.images == () for page in bare)

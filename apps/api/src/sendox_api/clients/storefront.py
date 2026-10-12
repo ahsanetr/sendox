@@ -15,7 +15,7 @@ Three rules this crawler keeps, and they are not optional:
 import asyncio
 import re
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
 import httpx
@@ -59,6 +59,7 @@ class Page:
     title: str
     text: str
     kind: str  # product | page | blog | collection | home
+    images: tuple[str, ...] = ()
 
     @property
     def word_count(self) -> int:
@@ -87,6 +88,73 @@ def classify(url: str) -> str:
         if marker in path:
             return kind
     return "home"
+
+
+# Shopify serves one image at many sizes from the same path, distinguished by a
+# query string (?v=, &width=). Keeping every variant would fill the inspector
+# with duplicates of the same photograph, so the query is dropped when deciding
+# whether an image has been seen before.
+MAX_IMAGES_PER_PAGE = 12
+TRACKING_PIXEL_HINTS = ("/cdn/shop/t/", "pixel", "spacer", "1x1", "blank.")
+
+
+def _absolutise(src: str, page_url: str) -> str | None:
+    """Resolve an image reference against the page it was found on.
+
+    Themes mix absolute URLs, root-relative paths and protocol-relative `//cdn`
+    references in the same document. Data URIs are dropped: they are almost
+    always an inline placeholder swapped out by lazy-loading, so keeping one
+    means keeping the blur rather than the photograph.
+    """
+    src = src.strip()
+    if not src or src.startswith("data:"):
+        return None
+    absolute = urljoin(page_url, src)
+    return absolute if absolute.startswith(("http://", "https://")) else None
+
+
+def extract_images(html: str, page_url: str) -> list[str]:
+    """Image URLs on a page, in document order, deduplicated by path.
+
+    Lazy-loading themes leave the real image in `data-src` or the largest entry
+    of a `srcset` while `src` holds a placeholder, so all three are read and the
+    first that resolves wins.
+    """
+    tree = LexborHTMLParser(html)
+    for selector in STRIP_SELECTORS:
+        for node in tree.css(selector):
+            node.decompose()
+
+    found: list[str] = []
+    seen_paths: set[str] = set()
+    for node in tree.css("img"):
+        candidates = [
+            node.attributes.get("data-src"),
+            node.attributes.get("src"),
+        ]
+        srcset = node.attributes.get("srcset") or node.attributes.get("data-srcset")
+        if srcset:
+            # "url 400w, url 800w" — the last entry is conventionally the largest.
+            candidates.append(srcset.split(",")[-1].strip().split(" ")[0])
+
+        for candidate in candidates:
+            if not candidate:
+                continue
+            url = _absolutise(candidate, page_url)
+            if url is None:
+                continue
+            if any(hint in url.lower() for hint in TRACKING_PIXEL_HINTS):
+                break
+            path = urlparse(url).path
+            if path in seen_paths:
+                break
+            seen_paths.add(path)
+            found.append(url)
+            break
+
+        if len(found) >= MAX_IMAGES_PER_PAGE:
+            break
+    return found
 
 
 def extract_text(html: str) -> tuple[str, list[str]]:
@@ -265,6 +333,10 @@ class StorefrontCrawler:
             await self._unlock(client)
 
             collected: list[tuple[str, str, list[str]]] = []
+            # Kept beside `collected` rather than inside it because the
+            # boilerplate pass works on text alone and should not have to carry
+            # anything it does not read.
+            images_by_url: dict[str, list[str]] = {}
 
             urls = await self.discover(client)
             if not urls:
@@ -290,6 +362,7 @@ class StorefrontCrawler:
 
                 title, lines = extract_text(response.text)
                 collected.append((url, title, lines))
+                images_by_url[url] = extract_images(response.text, url)
 
                 # Serialised and spaced: a storefront is a shop, not a test target.
                 await asyncio.sleep(self.delay)
@@ -301,13 +374,22 @@ class StorefrontCrawler:
             if len(text.split()) < 25:
                 report.skipped.append(f"{url}: no content beyond site furniture")
                 continue
-            report.pages.append(Page(url=url, title=title, text=text, kind=classify(url)))
+            report.pages.append(
+                Page(
+                    url=url,
+                    title=title,
+                    text=text,
+                    kind=classify(url),
+                    images=tuple(images_by_url.get(url, ())),
+                )
+            )
 
         log.info(
             "storefront.crawled",
             origin=self.origin,
             pages=len(report.pages),
             words=report.words,
+            images=sum(len(page.images) for page in report.pages),
             blocked=report.robots_blocked,
         )
         return report

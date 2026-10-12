@@ -112,7 +112,7 @@ def index_brand_knowledge(self: Any, tenant_id: str, store_id: str) -> dict[str,
     from sendox_api.clients.storefront import StorefrontCrawler
     from sendox_api.db import tenant_session
     from sendox_api.models import ShopifyStore
-    from sendox_api.services import brand_knowledge
+    from sendox_api.services import brand_knowledge, brand_profile
 
     settings = get_settings()
     tenant = _uuid.UUID(tenant_id)
@@ -138,9 +138,31 @@ def index_brand_knowledge(self: Any, tenant_id: str, store_id: str) -> dict[str,
                 "skipped": report.skipped[:5],
             }
 
-        chunks = brand_knowledge.chunks_from_pages(tenant, report.pages)
+        # Persist what was read before embedding any of it. The extracted text
+        # is the evidence for whatever the knowledge base later claims, and it
+        # has to survive independently of the vector store so a merchant can be
+        # shown the page rather than a fragment of it.
+        with tenant_session(settings, tenant) as session:
+            brand_profile.record_pages(session, tenant, _uuid.UUID(store_id), report.pages)
+            # A page the merchant has marked as unrepresentative is still stored
+            # and still visible to them, but must not reach the knowledge base.
+            excluded = {
+                page.url
+                for page in brand_profile.pages_for(session, tenant)
+                if not page.is_included
+            }
+            # The logo is only guessed when there is nothing to overwrite: once a
+            # merchant has corrected it, a later crawl must not undo that.
+            profile = brand_profile.ensure_profile(session, tenant)
+            if profile.logo_url is None:
+                guessed = brand_profile.guess_assets(report.pages)
+                if guessed is not None:
+                    profile.logo_url = guessed
+
+        indexable = [page for page in report.pages if page.url not in excluded]
+        chunks = brand_knowledge.chunks_from_pages(tenant, indexable)
         written = await chroma.aupsert_chunks(settings, tenant, chunks)
-        stats = brand_knowledge.stats_for(report.pages, chunks)
+        stats = brand_knowledge.stats_for(indexable, chunks)
 
         with tenant_session(settings, tenant) as session:
             store = session.get(ShopifyStore, _uuid.UUID(store_id))
@@ -151,6 +173,8 @@ def index_brand_knowledge(self: Any, tenant_id: str, store_id: str) -> dict[str,
             "status": "ok",
             "written": written,
             "robots_blocked": report.robots_blocked,
+            "pages_stored": len(report.pages),
+            "pages_excluded": len(excluded),
             **stats.as_dict(),
         }
 
