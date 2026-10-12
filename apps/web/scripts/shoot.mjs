@@ -38,26 +38,49 @@ for (const [route, name] of [
 }
 
 // One frame per colour scheme, so the choice can be made by looking rather
-// than by reading hex codes. Driven through the real picker, not by setting the
-// attribute directly — that way the screenshots also prove the control works.
-const SCHEMES = ["swiss", "graphite", "indigo", "teal", "midnight"];
+// than by reading hex codes. Driven through the real picker and selected by
+// label rather than position, so reordering the menu cannot silently make these
+// screenshots lie about which scheme they show.
+const SCHEMES = [
+  ["Midnight", null], // the default: chosen by clearing the attribute, not setting it
+  ["Swiss Blue", "swiss"],
+  ["Graphite", "graphite"],
+  ["Indigo", "indigo"],
+  ["Teal", "teal"],
+];
+
+async function choose(label) {
+  await page.click('button[aria-haspopup="menu"]');
+  await page.click(`[role="menuitemradio"]:has-text("${label}")`);
+  await page.waitForTimeout(400);
+}
+
 await page.goto("http://localhost:3000/contacts", { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(2000);
-for (const scheme of SCHEMES) {
-  await page.click('button[aria-haspopup="menu"]');
-  await page.click(`[role="menuitemradio"]:nth-of-type(${SCHEMES.indexOf(scheme) + 1})`);
-  await page.waitForTimeout(400);
-  const applied = await page.evaluate(() => document.documentElement.dataset.scheme);
-  if (applied !== scheme) throw new Error(`picker set ${applied}, expected ${scheme}`);
-  await page.screenshot({ path: `${OUT}/${LABEL}-scheme-${scheme}.png` });
+
+for (const [label, attr] of SCHEMES) {
+  await choose(label);
+  const applied = await page.evaluate(() => document.documentElement.dataset.scheme ?? null);
+  if (applied !== attr) {
+    throw new Error(`picking ${label} left data-scheme=${applied}, expected ${attr}`);
+  }
+  await page.screenshot({ path: `${OUT}/${LABEL}-scheme-${label.toLowerCase().replace(/ /g, "-")}.png` });
 }
-// Leave it on the default, and check the choice survives a reload.
-await page.click('button[aria-haspopup="menu"]');
-await page.click('[role="menuitemradio"]:nth-of-type(1)');
+
+// A non-default choice must survive a reload...
+await choose("Graphite");
 await page.reload({ waitUntil: "domcontentloaded" });
 await page.waitForTimeout(1500);
-const persisted = await page.evaluate(() => document.documentElement.dataset.scheme);
-if (persisted !== "swiss") throw new Error(`scheme did not persist: ${persisted}`);
+const kept = await page.evaluate(() => document.documentElement.dataset.scheme ?? null);
+if (kept !== "graphite") throw new Error(`scheme did not persist: ${kept}`);
+
+// ...and returning to the default must leave no attribute behind, because the
+// default is what :root already says.
+await choose("Midnight");
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(1500);
+const cleared = await page.evaluate(() => document.documentElement.dataset.scheme ?? null);
+if (cleared !== null) throw new Error(`default left data-scheme=${cleared}`);
 
 // Open the picker for one screenshot, so the menu itself gets reviewed too.
 await page.click('button[aria-haspopup="menu"]');

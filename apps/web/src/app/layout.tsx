@@ -21,8 +21,12 @@ const mono = Geist_Mono({
 
 /** Applied before React hydrates, so a remembered scheme never flashes the
  *  default on its way in. Inlined deliberately: a separate request would land
- *  after first paint, which is the whole problem. */
-const APPLY_SCHEME = `try{var s=localStorage.getItem("sendox.scheme");if(s&&["swiss","graphite","indigo","teal","midnight"].indexOf(s)>-1)document.documentElement.dataset.scheme=s}catch(e){}`;
+ *  after first paint, which is the whole problem.
+ *
+ *  The default scheme is the one on :root, so it needs no attribute and this
+ *  script writes nothing for it. Only a deliberate change away from the default
+ *  is recorded, in one place. */
+const APPLY_SCHEME = `try{var s=localStorage.getItem("sendox.scheme");if(s&&["swiss","graphite","indigo","teal"].indexOf(s)>-1)document.documentElement.dataset.scheme=s}catch(e){}`;
 
 export const metadata: Metadata = {
   title: "Sendox",

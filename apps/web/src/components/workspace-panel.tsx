@@ -370,6 +370,7 @@ export function WorkspacePanel() {
                       })
                     }
                     disabled={busy !== null}
+                    tone="danger"
                   >
                     Remove
                   </Button>

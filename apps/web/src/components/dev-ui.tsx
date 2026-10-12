@@ -83,18 +83,27 @@ export function Card({
 export function Button({
   onClick,
   disabled,
+  tone = "primary",
   children,
 }: {
   onClick: () => void;
   disabled?: boolean;
+  /** "danger" for anything that removes or revokes. The primary colour means
+   *  "this is the thing to do"; a destructive action is never that. */
+  tone?: "primary" | "danger";
   children: React.ReactNode;
 }) {
+  const tones = {
+    primary: "bg-primary text-primary-foreground hover:brightness-110",
+    danger:
+      "bg-transparent text-destructive ring-1 ring-inset ring-destructive/40 hover:bg-destructive/10",
+  } as const;
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-200 hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+      className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 ${tones[tone]}`}
     >
       {children}
     </button>

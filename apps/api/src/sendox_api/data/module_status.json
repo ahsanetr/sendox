@@ -75,7 +75,7 @@
       "name": "Product UI foundation \u2014 app shell and design system",
       "release": "R1",
       "status": "done",
-      "note": "Dark navigation rail with lucide icons, light canvas, Geist type. Colour, spacing and radius come from a generated design system (ui-ux-pro-max, Minimalism & Swiss) persisted at design-system/sendox/MASTER.md, and five switchable schemes ship with it. Every component reads tokens \u2014 no hardcoded palette classes remain. Home leads with what needs approval rather than metrics"
+      "note": "Dark navigation rail with lucide icons, dark canvas, Geist type. Colour, spacing and radius come from a generated design system (ui-ux-pro-max, Minimalism & Swiss) persisted at design-system/sendox/MASTER.md; the default scheme is Midnight, with four alternatives switchable from the rail. Every component reads tokens \u2014 no hardcoded palette classes remain. Home leads with what needs approval rather than metrics"
     }
   ],
   "modules": [

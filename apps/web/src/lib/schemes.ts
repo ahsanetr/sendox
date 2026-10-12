@@ -8,6 +8,14 @@ export type SchemeId = "swiss" | "graphite" | "indigo" | "teal" | "midnight";
 
 export const SCHEME_STORAGE_KEY = "sendox.scheme";
 
+/** The scheme that applies when nothing is stored.
+ *
+ *  It is the one defined on :root in globals.css, so it is already correct in
+ *  the server-rendered HTML — nothing has to run for the first paint to look
+ *  right. Changing this means changing :root too; they are one decision.
+ */
+export const DEFAULT_SCHEME: SchemeId = "midnight";
+
 export const SCHEMES: {
   id: SchemeId;
   label: string;
@@ -15,9 +23,15 @@ export const SCHEMES: {
   swatch: [string, string, string];
 }[] = [
   {
+    id: "midnight",
+    label: "Midnight",
+    note: "The default — dark throughout, green for healthy",
+    swatch: ["#0a0e1c", "#020617", "#22c55e"],
+  },
+  {
     id: "swiss",
     label: "Swiss Blue",
-    note: "The default — generated for this project",
+    note: "Light canvas, cobalt actions — the generated palette",
     swatch: ["#0f172a", "#f8fafc", "#2563eb"],
   },
   {
@@ -37,12 +51,6 @@ export const SCHEMES: {
     label: "Teal",
     note: "Cool canvas, teal actions, orange alerts",
     swatch: ["#0f2e2b", "#f0fdfa", "#0f766e"],
-  },
-  {
-    id: "midnight",
-    label: "Midnight",
-    note: "Dark throughout, green for healthy",
-    swatch: ["#0a0e1c", "#020617", "#22c55e"],
   },
 ];
 
@@ -71,16 +79,23 @@ export function subscribeScheme(onChange: () => void): () => void {
 
 export function readScheme(): SchemeId {
   const current = document.documentElement.dataset.scheme;
-  return isSchemeId(current) ? current : "swiss";
+  return isSchemeId(current) ? current : DEFAULT_SCHEME;
 }
 
 /** On the server there is no document, and no stored preference to honour. */
 export function readSchemeOnServer(): SchemeId {
-  return "swiss";
+  return DEFAULT_SCHEME;
 }
 
 export function writeScheme(id: SchemeId): void {
-  document.documentElement.dataset.scheme = id;
+  // Choosing the default removes the attribute rather than setting it to the
+  // default's own name: :root already says that, and two places saying the same
+  // thing is how they end up disagreeing.
+  if (id === DEFAULT_SCHEME) {
+    delete document.documentElement.dataset.scheme;
+  } else {
+    document.documentElement.dataset.scheme = id;
+  }
   try {
     window.localStorage.setItem(SCHEME_STORAGE_KEY, id);
   } catch {
