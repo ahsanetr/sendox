@@ -11,6 +11,7 @@ admin, so the two halves are deliberately asymmetric:
   signed state proves which workspace started it.
 """
 
+from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote
 
@@ -66,6 +67,52 @@ class StoreOut(BaseModel):
     last_indexed_at: str | None
 
 
+def _stale_url_warning(settings: Settings) -> str | None:
+    """Catch an API still holding a previous tunnel's URL.
+
+    Settings are read once at startup. In development the tunnel URL changes
+    whenever a quick tunnel is restarted, so an API left running from before
+    that keeps sending the old callback and Shopify answers "the redirect_uri
+    is not whitelisted" — which reads like a Shopify configuration problem and
+    is not one. The answer is sitting in .env on disk, so compare against it
+    and say so plainly.
+
+    Skipped in production: there is no .env there, and the deployed URL does
+    not change underneath a running process.
+    """
+    if settings.is_production:
+        return None
+
+    env_file = _find_env_file()
+    if env_file is None:
+        return None
+    try:
+        for line in env_file.read_text().splitlines():
+            if line.startswith("PUBLIC_BASE_URL="):
+                on_disk = line.split("=", 1)[1].strip()
+                if on_disk and on_disk != (settings.public_base_url or ""):
+                    return (
+                        "This API is still running with "
+                        f"{settings.public_base_url or 'no URL'}, but .env now says "
+                        f"{on_disk}. Shopify will refuse the callback until the API "
+                        "is restarted (make dev-api) and the new URL is deployed "
+                        "(shopify app deploy)."
+                    )
+                break
+    except OSError:
+        return None
+    return None
+
+
+def _find_env_file() -> Path | None:
+    here = Path(__file__).resolve()
+    for candidate in here.parents:
+        env = candidate / ".env"
+        if env.is_file():
+            return env
+    return None
+
+
 @router.get("/status", summary="Is Shopify connect available, and what is connected?")
 async def connection_status(workspace: Workspace, settings: SettingsDep) -> dict[str, Any]:
     with tenant_session(settings, workspace.tenant_id, workspace.user_id) as session:
@@ -87,6 +134,7 @@ async def connection_status(workspace: Workspace, settings: SettingsDep) -> dict
         ]
 
     ready = settings.shopify_configured and bool(settings.public_base_url)
+    stale = _stale_url_warning(settings)
     return {
         "configured": settings.shopify_configured,
         "public_url_set": bool(settings.public_base_url),
@@ -95,10 +143,16 @@ async def connection_status(workspace: Workspace, settings: SettingsDep) -> dict
         "scopes": settings.shopify_scope_list,
         "api_version": settings.shopify_api_version,
         "stores": stores,
-        "hint": None
-        if ready
-        else "Set SHOPIFY_API_KEY, SHOPIFY_API_SECRET and PUBLIC_BASE_URL, then "
-        "register the redirect URI on the Shopify app.",
+        # A stale URL outranks the not-configured hint: the app looks ready in
+        # that state, which is exactly why the failure is confusing.
+        "hint": stale
+        or (
+            None
+            if ready
+            else "Set SHOPIFY_API_KEY, SHOPIFY_API_SECRET and PUBLIC_BASE_URL, then "
+            "register the redirect URI on the Shopify app."
+        ),
+        "stale_url": stale is not None,
     }
 
 

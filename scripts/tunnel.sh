@@ -23,6 +23,17 @@ say "Stopping any previous tunnel"
 pkill -f "cloudflared tunnel" 2>/dev/null || true
 sleep 1
 
+# The API reads PUBLIC_BASE_URL once, at startup. An API still running from
+# before this script rewrites .env therefore keeps sending the previous
+# tunnel's callback URL, and Shopify answers "the redirect_uri is not
+# whitelisted" — which reads like a Shopify configuration problem and is not
+# one. Worse, the stale process holds port 8000, so `make dev-api` fails to
+# bind and the stale one survives. Stop it here so that cannot happen.
+if pkill -f "uvicorn sendox_api" 2>/dev/null; then
+  say "Stopped the running API — it was holding the previous URL"
+  sleep 1
+fi
+
 say "Starting a new tunnel to localhost:8000"
 nohup cloudflared tunnel --url http://localhost:8000 > "$LOG" 2>&1 &
 
@@ -71,10 +82,14 @@ PY
 
 cat <<NEXT
 
-Two things left, in this order:
+The old API has been stopped for you, because it was still holding the
+previous URL. Two things left, in this order:
 
-  1. make dev-api          # restart the API — it reads PUBLIC_BASE_URL at startup
+  1. make dev-api          # start the API again, on the new URL
   2. shopify app deploy    # push the new redirect URL to Shopify
+
+Both are required. Skipping either gives "Oauth error invalid_request:
+The redirect_uri is not whitelisted" at the Shopify authorize screen.
 
 Then connect the store at http://localhost:3000/brand
 
