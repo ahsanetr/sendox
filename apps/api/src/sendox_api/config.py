@@ -84,7 +84,13 @@ class Settings(BaseSettings):
     # Shopify (phase 1.2)
     shopify_api_key: str | None = None
     shopify_api_secret: str | None = None
-    shopify_scopes: str = "read_customers,read_orders,read_products"
+    # Must stay identical to [access_scopes] in shopify.app.toml. Shopify
+    # compares the scopes we ask for against the ones the app declares, so a
+    # drift here is not a smaller request — it is a failed or silently
+    # downgraded install. This default was missing read_checkouts while the
+    # manifest had it; only a .env override was keeping the two in step, which
+    # means any deployment without that variable would have broken OAuth.
+    shopify_scopes: str = "read_customers,read_orders,read_products,read_checkouts"
     shopify_api_version: str = "2026-10"
     # Public HTTPS origin Shopify redirects back to. Must match a redirect URL
     # registered on the app, and cannot be localhost.

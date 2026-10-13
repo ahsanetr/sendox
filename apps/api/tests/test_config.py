@@ -74,3 +74,44 @@ def test_repo_root_discovery_survives_a_flattened_layout(tmp_path) -> None:  # t
 
     # Running from this repository, the marker is found.
     assert (_find_repo_root() / "docker-compose.yml").is_file()
+
+
+def test_requested_scopes_match_the_app_manifest() -> None:
+    """The scopes we ask for must equal the ones the app declares to Shopify.
+
+    These live in two files that nothing links: `shopify.app.toml`, which is
+    deployed to Shopify, and the Settings default used to build the authorize
+    URL. They drifted once already — the default was missing `read_checkouts`
+    while the manifest had it, and only a `.env` override kept the two in step,
+    so any deployment without that variable would have asked for the wrong set.
+
+    Shopify does not treat a smaller request as a smaller grant: the install
+    fails or is silently downgraded, and the first symptom is abandoned-cart
+    recovery receiving no checkout events at all.
+    """
+    import re
+    from pathlib import Path
+
+    manifest = Path(__file__).resolve().parents[3] / "shopify.app.toml"
+    declared = re.search(r'scopes = "([^"]+)"', manifest.read_text())
+    assert declared, "no [access_scopes] scopes found in shopify.app.toml"
+
+    default = str(Settings.model_fields["shopify_scopes"].default)
+
+    assert sorted(declared.group(1).split(",")) == sorted(default.split(",")), (
+        "shopify.app.toml and Settings.shopify_scopes disagree; "
+        f"manifest={declared.group(1)!r} default={default!r}"
+    )
+
+
+def test_every_requested_scope_is_read_only() -> None:
+    """Sendox reads a merchant's store and never writes to it.
+
+    Enforced here as well as by Shopify, because this is the promise the app
+    listing makes to a merchant deciding whether to trust it. A write scope
+    appearing in this list should fail a build, not a review.
+    """
+    scopes = str(Settings.model_fields["shopify_scopes"].default).split(",")
+
+    offenders = [scope for scope in scopes if not scope.strip().startswith("read_")]
+    assert not offenders, f"non-read scope requested: {offenders}"
