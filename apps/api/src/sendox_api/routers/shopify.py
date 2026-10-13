@@ -11,6 +11,7 @@ admin, so the two halves are deliberately asymmetric:
   signed state proves which workspace started it.
 """
 
+import json
 from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote
@@ -104,6 +105,60 @@ def _stale_url_warning(settings: Settings) -> str | None:
     return None
 
 
+def _undeployed_url_warning(settings: Settings) -> str | None:
+    """Catch a callback URL that Shopify has never been told about.
+
+    Three things must carry the same URL: this process, shopify.app.toml, and
+    Shopify itself. The first two are checked above. The third cannot be
+    queried — but the Shopify CLI leaves the last deployed configuration in
+    .shopify/deploy-bundle/manifest.json, so what *was* deployed is knowable
+    locally even though what Shopify currently holds is not.
+
+    This is the failure that follows a tunnel restart: the URL is rewritten
+    everywhere locally, everything looks consistent, and Shopify still has the
+    previous one until `shopify app deploy` runs again. The error it produces
+    names redirect_uri, which sounds like a mistake in our configuration and is
+    not.
+    """
+    if settings.is_production:
+        return None
+
+    repo = _find_repo_root()
+    if repo is None:
+        return None
+    manifest = repo / ".shopify" / "deploy-bundle" / "manifest.json"
+    if not manifest.is_file():
+        return None
+
+    current = settings.oauth_redirect_uri
+    try:
+        deployed = json.loads(manifest.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    allowlists = [
+        url
+        for module in deployed.get("modules", [])
+        for url in module.get("config", {}).get("redirect_url_allowlist", [])
+    ]
+    if not allowlists or current in allowlists:
+        return None
+
+    return (
+        f"Shopify was last told to allow {allowlists[0]}, but this API will send "
+        f"{current}. Run `shopify app deploy` — until then Shopify answers "
+        '"The redirect_uri is not whitelisted".'
+    )
+
+
+def _find_repo_root() -> Path | None:
+    here = Path(__file__).resolve()
+    for candidate in here.parents:
+        if (candidate / "shopify.app.toml").is_file():
+            return candidate
+    return None
+
+
 def _find_env_file() -> Path | None:
     here = Path(__file__).resolve()
     for candidate in here.parents:
@@ -134,7 +189,8 @@ async def connection_status(workspace: Workspace, settings: SettingsDep) -> dict
         ]
 
     ready = settings.shopify_configured and bool(settings.public_base_url)
-    stale = _stale_url_warning(settings)
+    # Checked in the order the URL travels: this process, then Shopify.
+    stale = _stale_url_warning(settings) or _undeployed_url_warning(settings)
     return {
         "configured": settings.shopify_configured,
         "public_url_set": bool(settings.public_base_url),
