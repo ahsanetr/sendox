@@ -1,9 +1,9 @@
 "use client";
 
-import { Building2, CheckCheck, DownloadCloud, Store } from "lucide-react";
+import { Building2, CheckCheck, DownloadCloud, Sparkles, Store } from "lucide-react";
 import Link from "next/link";
 
-import { getImportedData, getShopifyStatus } from "@/lib/api";
+import { getBrandProfile, getImportedData, getShopifyStatus } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { usePolledResource } from "@/lib/use-polled-resource";
 import { PageHeader } from "@/components/app/page-header";
@@ -51,9 +51,19 @@ function Overview({ workspaceId }: { workspaceId: string }) {
     undefined,
     [workspaceId],
   );
+  const { data: brand } = usePolledResource(
+    () => getBrandProfile(workspaceId),
+    undefined,
+    [workspaceId],
+  );
 
   const connected = (shopify?.stores ?? []).filter((store) => store.connected);
   const counts = data?.counts;
+  // Anything at all having arrived, not contacts specifically. Shopify gates
+  // customers and orders behind an approval many stores do not have, so a
+  // perfectly successful import can land products and nothing else — and
+  // keying off contacts told those stores to import again, forever.
+  const imported = (counts?.products ?? 0) + (counts?.contacts ?? 0) > 0;
 
   return (
     <>
@@ -74,7 +84,7 @@ function Overview({ workspaceId }: { workspaceId: string }) {
               </Link>
             }
           />
-        ) : counts && counts.contacts === 0 ? (
+        ) : counts && !imported ? (
           <EmptyState
             icon={DownloadCloud}
             headline="Import your store data"
@@ -94,7 +104,52 @@ function Overview({ workspaceId }: { workspaceId: string }) {
         )}
       </Section>
 
-      {counts && counts.contacts > 0 && (
+      {/* What the brand profile says, on the page people actually open. The
+          answers steer every generation, so "is it set and what does it say"
+          should not require remembering which screen holds it. */}
+      {brand && (
+        <Section
+          title="What Sendox knows about you"
+          description="Your onboarding answers. Every campaign is written against them."
+          action={
+            <Link href="/brand">
+              <Button variant="quiet">
+                {brand.complete ? "Review answers" : "Finish setup"}
+              </Button>
+            </Link>
+          }
+        >
+          {brand.complete ? (
+            <dl className="panel divide-y divide-border/60">
+              {[
+                ["Sells", brand.what_you_sell],
+                ["Audience", brand.audience],
+                ["Voice", brand.tone],
+              ].map(([label, value]) => (
+                <div key={label} className="px-5 py-3.5">
+                  <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                  <dd className="mt-0.5 line-clamp-2 text-sm leading-relaxed">
+                    {value ?? "—"}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <EmptyState
+              icon={Sparkles}
+              headline="Sendox does not know your brand yet"
+              body="Five questions about what you sell and how you write. They steer every campaign, so they are worth a few real sentences each."
+              action={
+                <Link href="/brand">
+                  <Button>Answer them</Button>
+                </Link>
+              }
+            />
+          )}
+        </Section>
+      )}
+
+      {counts && imported && (
         <Section title="Your store" description="Imported from Shopify.">
           <Figures
             items={[
