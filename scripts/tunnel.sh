@@ -3,12 +3,22 @@
 # that needs it.
 #
 # Shopify will not redirect OAuth to localhost, so development needs a public
-# origin. A free cloudflared quick tunnel gets a random hostname and is revoked
-# after a while ("Unauthorized: Tunnel not found"), which means the URL changes
-# and three places go stale at once: .env, shopify.app.toml, and the running API
-# which read PUBLIC_BASE_URL at startup.
+# origin. There are two ways to get one, and this script prefers the good one.
 #
-# Doing that by hand is how an afternoon disappears, so this does all of it.
+# NAMED TUNNEL (preferred). Set TUNNEL_HOSTNAME in .env, e.g.
+# api.sendox.online, having run once:
+#
+#     cloudflared tunnel login
+#     cloudflared tunnel create sendox
+#     cloudflared tunnel route dns sendox api.sendox.online
+#
+# The hostname is then permanent. It survives restarts and reboots, which means
+# `shopify app deploy` is run once and never again — the single biggest source
+# of lost time on this project so far.
+#
+# QUICK TUNNEL (fallback). No account needed, but the hostname is random, the
+# tunnel is revoked after a while, and every restart invalidates the last
+# Shopify deploy. Fine for a first try, painful as a habit.
 
 set -euo pipefail
 
@@ -34,21 +44,44 @@ if pkill -f "uvicorn sendox_api" 2>/dev/null; then
   sleep 1
 fi
 
-say "Starting a new tunnel to localhost:8000"
-nohup cloudflared tunnel --url http://localhost:8000 > "$LOG" 2>&1 &
+# A named tunnel is configured when TUNNEL_HOSTNAME is set and cloudflared has
+# a tunnel of that name. Both must hold: the hostname alone would start a
+# tunnel that routes nowhere.
+TUNNEL_NAME="${TUNNEL_NAME:-sendox}"
+HOSTNAME_FROM_ENV=$(grep -E "^TUNNEL_HOSTNAME=" "$REPO_ROOT/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
 
-URL=""
-for _ in $(seq 1 40); do
-  URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" "$LOG" 2>/dev/null | head -1 || true)
-  [ -n "$URL" ] && break
-  sleep 2
-done
-
-if [ -z "$URL" ]; then
-  echo "Could not get a tunnel URL. See $LOG" >&2
-  exit 1
+NAMED=0
+if [ -n "$HOSTNAME_FROM_ENV" ] && cloudflared tunnel info "$TUNNEL_NAME" >/dev/null 2>&1; then
+  NAMED=1
 fi
-say "Tunnel: $URL"
+
+if [ "$NAMED" = "1" ]; then
+  URL="https://$HOSTNAME_FROM_ENV"
+  say "Named tunnel '$TUNNEL_NAME' -> $URL"
+  nohup cloudflared tunnel run --url http://localhost:8000 "$TUNNEL_NAME" > "$LOG" 2>&1 &
+  # Nothing to parse: the hostname is known in advance, which is the point.
+  sleep 3
+else
+  if [ -n "$HOSTNAME_FROM_ENV" ]; then
+    say "TUNNEL_HOSTNAME is set but no cloudflared tunnel named '$TUNNEL_NAME' exists."
+    say "Falling back to a quick tunnel. See the header of this script to fix that."
+  fi
+  say "Starting a quick tunnel to localhost:8000"
+  nohup cloudflared tunnel --url http://localhost:8000 > "$LOG" 2>&1 &
+
+  URL=""
+  for _ in $(seq 1 40); do
+    URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" "$LOG" 2>/dev/null | head -1 || true)
+    [ -n "$URL" ] && break
+    sleep 2
+  done
+
+  if [ -z "$URL" ]; then
+    echo "Could not get a tunnel URL. See $LOG" >&2
+    exit 1
+  fi
+  say "Quick tunnel: $URL"
+fi
 
 # --- propagate -------------------------------------------------------------
 python3 - "$URL" "$REPO_ROOT" <<'PY'
@@ -80,6 +113,20 @@ if toml.exists():
     print(f"    shopify.app.toml   {url}/shopify/callback")
 PY
 
+if [ "$NAMED" = "1" ]; then
+cat <<NEXT
+
+The old API has been stopped for you. One thing left:
+
+  make dev-api             # start the API again
+
+No redeploy: this hostname is permanent, so Shopify already allows it. If this
+is the first time you have used it, run `shopify app deploy` once.
+
+Then connect the store at http://localhost:3000/brand
+
+NEXT
+else
 cat <<NEXT
 
 The old API has been stopped for you, because it was still holding the
@@ -91,6 +138,10 @@ previous URL. Two things left, in this order:
 Both are required. Skipping either gives "Oauth error invalid_request:
 The redirect_uri is not whitelisted" at the Shopify authorize screen.
 
-Then connect the store at http://localhost:3000/brand
+This hostname is random and temporary, so the deploy above is invalidated the
+next time this script runs. Set TUNNEL_HOSTNAME in .env to stop that happening
+at all — see the header of this script.
 
+Then connect the store at http://localhost:3000/brand
 NEXT
+fi
