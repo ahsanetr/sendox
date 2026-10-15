@@ -66,22 +66,76 @@ else
     say "TUNNEL_HOSTNAME is set but no cloudflared tunnel named '$TUNNEL_NAME' exists."
     say "Falling back to a quick tunnel. See the header of this script to fix that."
   fi
+  # Cloudflare's quick-tunnel endpoint is a free shared service and is
+  # sometimes slow enough that cloudflared's own client timeout fires first
+  # ("context deadline exceeded"). Measured at ~20s from here on a bad day.
+  # That is transient, so retry the launch rather than treating one slow
+  # request as a failure.
   say "Starting a quick tunnel to localhost:8000"
-  nohup cloudflared tunnel --url http://localhost:8000 > "$LOG" 2>&1 &
+  ATTEMPT=1
 
+  # `api.trycloudflare.com` is cloudflared's own control endpoint and appears
+  # in the log both normally and inside the error raised when the quick-tunnel
+  # request times out. Matching it produced a config pointing at an address
+  # that was never a tunnel, which is worse than failing: everything downstream
+  # looked configured. Exclude it by name.
   URL=""
-  for _ in $(seq 1 40); do
-    URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" "$LOG" 2>/dev/null | head -1 || true)
-    [ -n "$URL" ] && break
-    sleep 2
+  while [ "$ATTEMPT" -le 4 ] && [ -z "$URL" ]; do
+    : > "$LOG"
+    nohup cloudflared tunnel --url http://localhost:8000 > "$LOG" 2>&1 &
+
+    for _ in $(seq 1 20); do
+      URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" "$LOG" 2>/dev/null \
+              | grep -v "^https://api\.trycloudflare\.com$" | head -1 || true)
+      [ -n "$URL" ] && break
+      grep -q "failed to request quick Tunnel" "$LOG" 2>/dev/null && break
+      sleep 2
+    done
+
+    if [ -z "$URL" ]; then
+      say "Attempt $ATTEMPT did not get a tunnel; Cloudflare was slow. Retrying."
+      pkill -f "cloudflared tunnel --url" 2>/dev/null || true
+      ATTEMPT=$((ATTEMPT + 1))
+      sleep 3
+    fi
   done
 
   if [ -z "$URL" ]; then
-    echo "Could not get a tunnel URL. See $LOG" >&2
+    echo >&2
+    echo "Cloudflare did not issue a quick tunnel after 4 attempts:" >&2
+    grep "failed to request quick Tunnel" "$LOG" 2>/dev/null | tail -1 >&2
+    echo >&2
+    echo "Nothing has been changed. Quick tunnels are a free shared service" >&2
+    echo "and are slow or unavailable often enough that this is worth" >&2
+    echo "escaping: set TUNNEL_HOSTNAME and use a named tunnel instead." >&2
+    echo "See the header of this script." >&2
     exit 1
   fi
   say "Quick tunnel: $URL"
 fi
+
+# Prove the tunnel carries traffic to this machine before writing it anywhere.
+# A URL that does not answer is not a configuration worth propagating, and the
+# failure it causes later points at Shopify rather than at the tunnel.
+say "Checking the tunnel reaches the API"
+REACHED=0
+for _ in $(seq 1 10); do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$URL/" 2>/dev/null || true)
+  if [ "$CODE" != "000" ] && [ -n "$CODE" ]; then
+    REACHED=1
+    break
+  fi
+  sleep 3
+done
+
+if [ "$REACHED" != "1" ]; then
+  echo >&2
+  echo "The tunnel came up at $URL but nothing answers through it." >&2
+  echo "Is the API running on localhost:8000? Start it with: make dev-api" >&2
+  echo "Nothing has been changed." >&2
+  exit 1
+fi
+say "Tunnel reaches the API"
 
 # --- propagate -------------------------------------------------------------
 python3 - "$URL" "$REPO_ROOT" <<'PY'

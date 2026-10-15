@@ -13,7 +13,7 @@ client_id = "72c258c9d950b9590408e50537509d78"
 name = "Sendox"
 # No `handle`: handles are globally unique and this app already has one.
 # Declaring it here tries to claim it again, which fails validation.
-application_url = "https://spoke-stay-dragon-dispatch.trycloudflare.com"
+application_url = "https://commissioner-ambien-westminster-learned.trycloudflare.com"
 
 # Not embedded: Sendox is a standalone dashboard the merchant signs in to, the
 # same shape as Klaviyo — not a panel rendered inside the Shopify admin.
@@ -26,7 +26,7 @@ embedded = false
 scopes = "read_customers,read_orders,read_products,read_checkouts"
 
 [auth]
-redirect_urls = [ "https://spoke-stay-dragon-dispatch.trycloudflare.com/shopify/callback" ]
+redirect_urls = [ "https://commissioner-ambien-westminster-learned.trycloudflare.com/shopify/callback" ]
 
 [webhooks]
 api_version = "2026-10"
