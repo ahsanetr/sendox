@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from sendox_api.db import tenant_session
 from sendox_api.dependencies import SettingsDep, Workspace
 from sendox_api.models import BrandTone, MemberRole
-from sendox_api.services import brand_profile
+from sendox_api.services import brand_analysis, brand_context, brand_profile
 from sendox_api.services.errors import InsufficientRole
 
 log = structlog.get_logger(__name__)
@@ -210,3 +210,73 @@ async def set_exclusion(
             "included": page.is_included,
             "reindex_required": True,
         }
+
+
+@router.get("/analysis", summary="What the agent concluded from this brand's data")
+async def read_analysis(workspace: Workspace, settings: SettingsDep) -> dict[str, Any]:
+    """The current analysis, its evidence, and the prompt that produced it."""
+    with tenant_session(settings, workspace.tenant_id, workspace.user_id) as session:
+        row = brand_analysis.latest(session, workspace.tenant_id)
+        versions = [
+            {
+                "version": item.version,
+                "generated_at": item.generated_at.isoformat(),
+                "model": item.model,
+                "current": item.superseded_at is None
+                and row is not None
+                and item.version == row.version,
+            }
+            for item in brand_analysis.history(session, workspace.tenant_id)
+        ]
+        if row is None:
+            return {"generated": False, "versions": versions}
+        return {
+            "generated": True,
+            "version": row.version,
+            "generated_at": row.generated_at.isoformat(),
+            "model": row.model,
+            "input_tokens": row.input_tokens,
+            "output_tokens": row.output_tokens,
+            "analysis": row.analysis,
+            "sources": row.sources,
+            # The prompt is deliberately returned in full. A conclusion you
+            # cannot trace to its input is one you cannot argue with.
+            "prompt": row.prompt,
+            "versions": versions,
+        }
+
+
+@router.post("/analysis", summary="Analyse this brand's data")
+async def start_analysis(workspace: Workspace, settings: SettingsDep) -> dict[str, Any]:
+    _require_editor(workspace, "analysing the brand")
+
+    from sendox_api.tasks import analyse_brand
+
+    task = analyse_brand.delay(str(workspace.tenant_id))
+    return {"status": "queued", "task_id": task.id}
+
+
+@router.post("/analysis/{version}/restore", summary="Make an older analysis current")
+async def restore_analysis(
+    version: int, workspace: Workspace, settings: SettingsDep
+) -> dict[str, Any]:
+    """Restore rather than delete: a later version may turn out to be better."""
+    _require_editor(workspace, "restoring an analysis")
+
+    with tenant_session(settings, workspace.tenant_id, workspace.user_id) as session:
+        row = brand_analysis.restore(session, workspace.tenant_id, version)
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="no such version")
+        return {"version": row.version, "current": True}
+
+
+@router.get("/context", summary="The composed context the writing agents use")
+async def read_context(workspace: Workspace, settings: SettingsDep) -> dict[str, Any]:
+    """Merchant answers and analysis in one object, each field keeping its source.
+
+    This is what the agents will actually be given, returned verbatim so that
+    what the merchant reviews and what the model receives cannot drift apart.
+    """
+    with tenant_session(settings, workspace.tenant_id, workspace.user_id) as session:
+        context = brand_context.compose(session, workspace.tenant_id)
+        return {"context": context, "as_prompt": brand_context.as_prompt_block(context)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { ShopifyPanel } from "@/components/shopify-panel";
+import { BrandAnalysis } from "@/components/brand/brand-analysis";
 import { OnboardingWizard } from "@/components/brand/onboarding-wizard";
 import { PageInspector } from "@/components/brand/page-inspector";
 import { PageHeader } from "@/components/app/page-header";
@@ -32,6 +33,13 @@ export default function BrandPage() {
         description="Sendox reads your catalogue, customers and order history. It never writes to your store."
       >
         <ShopifyPanel />
+      </Section>
+
+      <Section
+        title="What Sendox worked out"
+        description="Read from your catalogue and storefront copy, not from your answers. Where the two disagree, that is shown rather than smoothed over."
+      >
+        <BrandAnalysis />
       </Section>
 
       <Section

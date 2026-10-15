@@ -131,7 +131,7 @@
       "release": "R1",
       "phase": "1.5",
       "status": "partial",
-      "note": "Vector store, local embeddings, semantic search, and paragraph-aware chunking of crawled pages with stable ids so re-crawls overwrite. Brand-profile schema now exists (M6); knowledge-base versioning and the chunk-level inspector not started"
+      "note": "Vector store, local embeddings, semantic search and paragraph-aware chunking with stable ids. AI-generated brand profile (FE-4) reads the catalogue, storefront copy and the merchant's answers and returns structured fields with per-claim evidence, explicit confidence and the contradictions between what the brand says and what its data shows; the exact prompt is stored and shown. Versioned and restorable (FE-5). Composed with the merchant's answers into one context for the writing agents, every field keeping its source. Chunk-level inspector (FE-6) and manual override (FE-7) not started"
     },
     {
       "id": "M8",

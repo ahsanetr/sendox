@@ -472,3 +472,66 @@ export const setBrandPageExcluded = (
     `/workspaces/${workspaceId}/brand/pages/${pageId}/exclusion`,
     { method: "POST", body: JSON.stringify({ excluded }) },
   );
+
+
+// ------------------------------------------------- Brand analysis (M7 FE-4/5)
+
+export type BrandAnalysisBody = {
+  positioning?: string | null;
+  sells?: string[];
+  does_not_sell?: string[];
+  price_positioning?: { summary?: string; low?: number; high?: number; typical?: number };
+  product_themes?: string[];
+  audience?: string | null;
+  tone?: string | null;
+  voice_markers?: string[];
+  usps?: string[];
+  vocabulary?: string[];
+  evidence?: Record<string, string[]>;
+  contradictions?: string[];
+  confidence?: "high" | "medium" | "low";
+  confidence_reason?: string;
+};
+
+export type BrandAnalysisVersion = {
+  version: number;
+  generated_at: string;
+  model: string;
+  current: boolean;
+};
+
+export type BrandAnalysisResult =
+  | { generated: false; versions: BrandAnalysisVersion[] }
+  | {
+      generated: true;
+      version: number;
+      generated_at: string;
+      model: string;
+      input_tokens: number;
+      output_tokens: number;
+      analysis: BrandAnalysisBody;
+      sources: {
+        counts?: Record<string, number>;
+        products_shown?: number;
+        pages_shown?: number;
+        used_merchant_answers?: boolean;
+        missing?: string[];
+      };
+      prompt: string;
+      versions: BrandAnalysisVersion[];
+    };
+
+export const getBrandAnalysis = (workspaceId: string) =>
+  request<BrandAnalysisResult>(`/workspaces/${workspaceId}/brand/analysis`);
+
+export const startBrandAnalysis = (workspaceId: string) =>
+  request<{ status: string; task_id: string }>(
+    `/workspaces/${workspaceId}/brand/analysis`,
+    { method: "POST" },
+  );
+
+export const restoreBrandAnalysis = (workspaceId: string, version: number) =>
+  request<{ version: number; current: boolean }>(
+    `/workspaces/${workspaceId}/brand/analysis/${version}/restore`,
+    { method: "POST" },
+  );

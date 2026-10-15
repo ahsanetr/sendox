@@ -88,7 +88,18 @@ def import_shopify_store(self: Any, tenant_id: str, store_id: str) -> dict[str, 
             # import succeeded at what it was allowed to do, and saying "ok"
             # would hide a gap the merchant has to act on.
             status = "partial" if report.unavailable else "ok"
-            return {"status": status, **report.as_dict()}
+            result = {"status": status, **report.as_dict()}
+
+        # Analyse what just arrived. Queued rather than awaited: the import is
+        # what the merchant is waiting on, and a model call that takes half a
+        # minute should not be the reason the page still says "importing".
+        if report.products or report.customers:
+            try:
+                analyse_brand.delay(tenant_id)
+            except Exception as exc:  # noqa: BLE001 - never fail an import over this
+                log.warning("brand_analysis.enqueue_failed", tenant=tenant_id, error=str(exc))
+
+        return result
 
     try:
         return asyncio.run(run())
@@ -187,3 +198,43 @@ def index_brand_knowledge(self: Any, tenant_id: str, store_id: str) -> dict[str,
     except Exception as exc:
         log.error("brand_knowledge.index_failed", store=store_id, error=str(exc))
         raise self.retry(exc=exc, countdown=60) from exc
+
+
+@celery_app.task(name="sendox.analyse_brand", bind=True, max_retries=1)
+def analyse_brand(self: Any, tenant_id: str) -> dict[str, Any]:
+    """Read a workspace's catalogue and copy, and record what they say about it.
+
+    In a worker because it is a model call that can take tens of seconds, and
+    because it is triggered by an import finishing as well as by a button.
+    """
+    import asyncio
+    import uuid as _uuid
+
+    from sendox_api.db import tenant_session
+    from sendox_api.services import brand_analysis
+
+    settings = get_settings()
+    tenant = _uuid.UUID(tenant_id)
+
+    async def run() -> dict[str, Any]:
+        with tenant_session(settings, tenant) as session:
+            try:
+                row = await brand_analysis.analyse(settings, session, tenant)
+            except ValueError as exc:
+                # Nothing to read is a state, not a failure: a workspace with no
+                # store yet should not fill the log with retried exceptions.
+                return {"status": "skipped", "reason": str(exc)}
+            return {
+                "status": "ok",
+                "version": row.version,
+                "confidence": row.analysis.get("confidence"),
+                "model": row.model,
+                "input_tokens": row.input_tokens,
+                "output_tokens": row.output_tokens,
+            }
+
+    try:
+        return asyncio.run(run())
+    except Exception as exc:
+        log.error("brand_analysis.failed", tenant=tenant_id, error=str(exc))
+        raise self.retry(exc=exc, countdown=30) from exc
