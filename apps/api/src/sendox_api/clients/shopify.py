@@ -40,6 +40,14 @@ class ShopifyError(RuntimeError):
     """A request failed in a way retrying will not fix."""
 
 
+class ShopifyProtectedDataError(ShopifyError):
+    """Customers, orders and checkouts need an approval the app does not have.
+
+    Separate from ShopifyAuthError because the remedy is completely different:
+    the token is valid and the install is healthy, and a retry will never help.
+    """
+
+
 class ShopifyAuthError(ShopifyError):
     """The token was rejected — usually the app was uninstalled."""
 
@@ -108,6 +116,21 @@ class ShopifyClient:
                 continue
 
             if response.status_code in (401, 403):
+                # A 403 citing protected customer data is a different problem
+                # from a dead token, and saying "the app may have been
+                # uninstalled" sends you to check an installation that is
+                # fine. Shopify gates customers, orders and checkouts behind an
+                # approval granted in the Partner Dashboard; products and shop
+                # metadata keep working throughout, which is the tell.
+                body = response.text[:400]
+                if "protected customer data" in body:
+                    raise ShopifyProtectedDataError(
+                        f"{self.shop_domain} allows this app to read products, but not "
+                        "customers, orders or checkouts: the app is not approved for "
+                        "protected customer data. Request it under Partner Dashboard "
+                        "> your app > API access > Protected customer data access. "
+                        "Nothing is wrong with the install or the token."
+                    )
                 raise ShopifyAuthError(
                     f"{self.shop_domain} rejected the access token "
                     f"({response.status_code}) — the app may have been uninstalled"

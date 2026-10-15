@@ -16,7 +16,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sendox_api.clients.shopify import ShopifyClient
+from sendox_api.clients.shopify import ShopifyClient, ShopifyProtectedDataError
 from sendox_api.models import ConsentState, Contact, Event, EventType, Product
 
 log = structlog.get_logger(__name__)
@@ -29,6 +29,9 @@ class SyncReport:
     products: int = 0
     abandoned_checkouts: int = 0
     skipped: list[str] = field(default_factory=list)
+    # Collections the store would not hand over, with the reason. Kept separate
+    # from `skipped`, which is about individual records we chose not to keep.
+    unavailable: dict[str, str] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -38,6 +41,7 @@ class SyncReport:
             "abandoned_checkouts": self.abandoned_checkouts,
             "skipped": self.skipped[:20],
             "skipped_total": len(self.skipped),
+            "unavailable": self.unavailable,
         }
 
 
@@ -185,25 +189,42 @@ async def import_store(
     """
     report = SyncReport()
 
-    # Customers first: orders and checkouts attach to them.
-    async for customer in client.paginate("customers.json", "customers"):
-        contact = upsert_contact(session, tenant_id, customer)
-        if contact is None:
-            report.skipped.append(f"customer {customer.get('id')}: no email")
-            continue
-        session.flush()
-        record_event(
-            session,
-            tenant_id,
-            contact=contact,
-            event_type=EventType.SIGNED_UP,
-            occurred_at=_parse_time(customer.get("created_at")),
-            external_id=f"customer:{customer.get('id')}",
-            meta={"source": "shopify"},
-        )
-        report.customers += 1
-        if max_records and report.customers >= max_records:
-            break
+    # Products first, deliberately. They are the only collection Shopify does
+    # not gate behind protected-customer-data approval, so putting them first
+    # means a store that has not been granted that approval still gets its
+    # catalogue — which is what brand knowledge is built from — instead of
+    # nothing at all.
+    try:
+        async for product in client.paginate("products.json", "products"):
+            upsert_product(session, tenant_id, product)
+            report.products += 1
+            if max_records and report.products >= max_records:
+                break
+    except ShopifyProtectedDataError as exc:  # pragma: no cover - not gated today
+        report.unavailable["products"] = str(exc)
+
+    # Customers next: orders and checkouts attach to them.
+    try:
+        async for customer in client.paginate("customers.json", "customers"):
+            contact = upsert_contact(session, tenant_id, customer)
+            if contact is None:
+                report.skipped.append(f"customer {customer.get('id')}: no email")
+                continue
+            session.flush()
+            record_event(
+                session,
+                tenant_id,
+                contact=contact,
+                event_type=EventType.SIGNED_UP,
+                occurred_at=_parse_time(customer.get("created_at")),
+                external_id=f"customer:{customer.get('id')}",
+                meta={"source": "shopify"},
+            )
+            report.customers += 1
+            if max_records and report.customers >= max_records:
+                break
+    except ShopifyProtectedDataError as exc:
+        report.unavailable["customers"] = str(exc)
 
     by_email = {
         contact.email: contact
@@ -212,42 +233,39 @@ async def import_store(
         ).scalars()
     }
 
-    async for order in client.paginate("orders.json", "orders", status="any"):
-        email = str(order.get("email") or "").strip().lower()
-        contact = by_email.get(email)
-        occurred = _parse_time(order.get("created_at"))
+    try:
+        async for order in client.paginate("orders.json", "orders", status="any"):
+            email = str(order.get("email") or "").strip().lower()
+            contact = by_email.get(email)
+            occurred = _parse_time(order.get("created_at"))
 
-        event = record_event(
-            session,
-            tenant_id,
-            contact=contact,
-            event_type=EventType.PLACED_ORDER,
-            occurred_at=occurred,
-            external_id=f"order:{order.get('id')}",
-            value=float(order.get("total_price") or 0),
-            meta={
-                "order_number": order.get("order_number"),
-                "currency": order.get("currency"),
-                "line_items": [
-                    {"title": item.get("title"), "quantity": item.get("quantity")}
-                    for item in (order.get("line_items") or [])[:10]
-                ],
-            },
-        )
-        if event is not None:
-            report.orders += 1
-        if contact is not None and (
-            contact.last_order_at is None or occurred > contact.last_order_at
-        ):
-            contact.last_order_at = occurred
-        if max_records and report.orders >= max_records:
-            break
-
-    async for product in client.paginate("products.json", "products"):
-        upsert_product(session, tenant_id, product)
-        report.products += 1
-        if max_records and report.products >= max_records:
-            break
+            event = record_event(
+                session,
+                tenant_id,
+                contact=contact,
+                event_type=EventType.PLACED_ORDER,
+                occurred_at=occurred,
+                external_id=f"order:{order.get('id')}",
+                value=float(order.get("total_price") or 0),
+                meta={
+                    "order_number": order.get("order_number"),
+                    "currency": order.get("currency"),
+                    "line_items": [
+                        {"title": item.get("title"), "quantity": item.get("quantity")}
+                        for item in (order.get("line_items") or [])[:10]
+                    ],
+                },
+            )
+            if event is not None:
+                report.orders += 1
+            if contact is not None and (
+                contact.last_order_at is None or occurred > contact.last_order_at
+            ):
+                contact.last_order_at = occurred
+            if max_records and report.orders >= max_records:
+                break
+    except ShopifyProtectedDataError as exc:
+        report.unavailable["orders"] = str(exc)
 
     log.info(
         "shopify.import_complete",

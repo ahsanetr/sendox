@@ -84,7 +84,11 @@ def import_shopify_store(self: Any, tenant_id: str, store_id: str) -> dict[str, 
             client = shopify_stores.client_for(settings, store)
             report = await shopify_sync.import_store(client, session, tenant)
             store.last_sync_at = datetime.now(UTC)
-            return {"status": "ok", **report.as_dict()}
+            # "partial" rather than "ok" when a collection was refused: the
+            # import succeeded at what it was allowed to do, and saying "ok"
+            # would hide a gap the merchant has to act on.
+            status = "partial" if report.unavailable else "ok"
+            return {"status": status, **report.as_dict()}
 
     try:
         return asyncio.run(run())

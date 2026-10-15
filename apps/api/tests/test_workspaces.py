@@ -277,3 +277,52 @@ def test_deleting_an_account_keeps_workspaces_that_others_still_use(
     assert removed["memberships_removed"] == 2
     assert [m["email"] for m in remaining] == [owner.email]
     delete_account(client, owner)
+
+
+def test_the_suite_teardown_spares_workspaces_it_did_not_create(
+    client: TestClient, settings: Settings
+) -> None:
+    """A developer's workspace must survive a test run. One did not.
+
+    The teardown deletes the suite's `@example.com` users, which cascades their
+    memberships away. It then deleted every memberless tenant — which catches a
+    real workspace whose only member was such an account, and takes its
+    connected Shopify store with it. A live store connection was destroyed that
+    way, by running the tests.
+
+    This asserts the rule the teardown now follows: tenants that existed before
+    the session started are never deleted, memberless or not.
+    """
+    import sqlalchemy as sa
+
+    from sendox_api.db import get_sessionmaker
+
+    owner = register_and_verify(client, prefix="survivor", workspace_name="Keep Me")
+    tenant_id = first_workspace(client, owner)["id"]
+
+    # Make it memberless, exactly as cascading a deleted user would.
+    with get_sessionmaker(settings)() as session:
+        session.execute(sa.text("DELETE FROM memberships WHERE tenant_id = :t"), {"t": tenant_id})
+        session.commit()
+
+    # Run the teardown's own statement, with the guard the fixture applies.
+    with get_sessionmaker(settings)() as session:
+        session.execute(
+            sa.text(
+                "DELETE FROM tenants t WHERE NOT EXISTS "
+                "(SELECT 1 FROM memberships m WHERE m.tenant_id = t.id) "
+                "AND t.id <> ALL(:keep)"
+            ),
+            {"keep": [tenant_id]},
+        )
+        session.commit()
+
+        survived = session.execute(
+            sa.text("SELECT count(*) FROM tenants WHERE id = :t"), {"t": tenant_id}
+        ).scalar()
+
+    assert survived == 1, "a pre-existing workspace was deleted by the purge"
+
+    with get_sessionmaker(settings)() as session:
+        session.execute(sa.text("DELETE FROM tenants WHERE id = :t"), {"t": tenant_id})
+        session.commit()
