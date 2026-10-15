@@ -11,8 +11,10 @@ import { Button, EmptyState, Figures, Pill, Section, Table } from "@/components/
 
 export default function ContactsPage() {
   const { activeWorkspace } = useSession();
-  const { data } = usePolledResource(() =>
-    activeWorkspace ? getImportedData(activeWorkspace.id) : Promise.resolve(null),
+  const { data } = usePolledResource(
+    () => (activeWorkspace ? getImportedData(activeWorkspace.id) : Promise.resolve(null)),
+    undefined,
+    [activeWorkspace?.id],
   );
 
   const contacts = data?.top_contacts ?? [];

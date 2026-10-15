@@ -41,8 +41,16 @@ function NoWorkspace() {
 }
 
 function Overview({ workspaceId }: { workspaceId: string }) {
-  const { data: shopify } = usePolledResource(() => getShopifyStatus(workspaceId));
-  const { data } = usePolledResource(() => getImportedData(workspaceId));
+  const { data: shopify } = usePolledResource(
+    () => getShopifyStatus(workspaceId),
+    undefined,
+    [workspaceId],
+  );
+  const { data } = usePolledResource(
+    () => getImportedData(workspaceId),
+    undefined,
+    [workspaceId],
+  );
 
   const connected = (shopify?.stores ?? []).filter((store) => store.connected);
   const counts = data?.counts;
