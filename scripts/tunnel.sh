@@ -19,6 +19,12 @@
 # QUICK TUNNEL (fallback). No account needed, but the hostname is random, the
 # tunnel is revoked after a while, and every restart invalidates the last
 # Shopify deploy. Fine for a first try, painful as a habit.
+#
+# NGROK (second fallback). Used when cloudflared cannot get a quick tunnel at
+# all, which happens: the free endpoint is shared and has been measured at 20s
+# from here, longer than cloudflared's own client timeout. Needs a free account
+# and a one-time `ngrok config add-authtoken <token>`. Same random-hostname
+# caveat as a quick tunnel.
 
 set -euo pipefail
 
@@ -100,18 +106,34 @@ else
     fi
   done
 
+  if [ -z "$URL" ] && command -v ngrok >/dev/null 2>&1 && ngrok config check >/dev/null 2>&1; then
+    say "Cloudflare would not issue a quick tunnel; falling back to ngrok"
+    pkill -f "ngrok http" 2>/dev/null || true
+    sleep 1
+    nohup ngrok http 8000 --log=stdout > "$LOG_DIR/ngrok.log" 2>&1 &
+
+    # ngrok publishes the assigned URL on its own local API, which is more
+    # reliable to read than its log format.
+    for _ in $(seq 1 20); do
+      URL=$(curl -s --max-time 3 http://127.0.0.1:4040/api/tunnels 2>/dev/null \
+              | grep -oE "https://[a-z0-9-]+\.ngrok[a-z.-]*\.app" | head -1 || true)
+      [ -n "$URL" ] && break
+      sleep 2
+    done
+    [ -n "$URL" ] && say "ngrok tunnel: $URL"
+  fi
+
   if [ -z "$URL" ]; then
     echo >&2
-    echo "Cloudflare did not issue a quick tunnel after 4 attempts:" >&2
+    echo "Could not get a tunnel from Cloudflare, and ngrok is not set up." >&2
     grep "failed to request quick Tunnel" "$LOG" 2>/dev/null | tail -1 >&2
     echo >&2
-    echo "Nothing has been changed. Quick tunnels are a free shared service" >&2
-    echo "and are slow or unavailable often enough that this is worth" >&2
-    echo "escaping: set TUNNEL_HOSTNAME and use a named tunnel instead." >&2
+    echo "Nothing has been changed. Either:" >&2
+    echo "  - set TUNNEL_HOSTNAME and use a named tunnel (permanent, best), or" >&2
+    echo "  - run: ngrok config add-authtoken <token>   (free, from ngrok.com)" >&2
     echo "See the header of this script." >&2
     exit 1
   fi
-  say "Quick tunnel: $URL"
 fi
 
 # Prove the tunnel carries traffic to this machine before writing it anywhere.
