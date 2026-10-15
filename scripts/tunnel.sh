@@ -139,11 +139,14 @@ fi
 # Prove the tunnel carries traffic to this machine before writing it anywhere.
 # A URL that does not answer is not a configuration worth propagating, and the
 # failure it causes later points at Shopify rather than at the tunnel.
+# Check for this API specifically, not merely for a response. Cloudflare serves
+# its own 502 page when a tunnel is up but nothing is listening behind it, and
+# any "did we get a status code" test passes on that — reporting success for a
+# tunnel that reaches nothing.
 say "Checking the tunnel reaches the API"
 REACHED=0
 for _ in $(seq 1 10); do
-  CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$URL/" 2>/dev/null || true)
-  if [ "$CODE" != "000" ] && [ -n "$CODE" ]; then
+  if curl -s --max-time 20 "$URL/" 2>/dev/null | grep -q "sendox-api"; then
     REACHED=1
     break
   fi
@@ -152,8 +155,8 @@ done
 
 if [ "$REACHED" != "1" ]; then
   echo >&2
-  echo "The tunnel came up at $URL but nothing answers through it." >&2
-  echo "Is the API running on localhost:8000? Start it with: make dev-api" >&2
+  echo "The tunnel came up at $URL but the Sendox API does not answer" >&2
+  echo "through it. Is it running on localhost:8000? Start it: make dev-api" >&2
   echo "Nothing has been changed." >&2
   exit 1
 fi
